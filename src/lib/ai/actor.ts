@@ -1,5 +1,7 @@
-import { convertToModelMessages, streamText, type LanguageModel } from "ai";
+import { convertToModelMessages, Output, streamText, type LanguageModel } from "ai";
+import { z } from "zod";
 
+import { actorOutputSchema } from "$lib/ai/schema";
 import type { Beat } from "$lib/screenplay/screenplay";
 
 export interface ActorAgentContext {
@@ -30,12 +32,6 @@ export async function runActorAgent({ model, language, slugline, role, actions, 
         `
       }]
     }]),
-    /*
-    output: Output.object({
-      schema: z.object({
-        text: z.string()
-      })
-    })
-    */
+    output: Output.object({ schema: actorOutputSchema })
   });
 }

@@ -64,6 +64,10 @@ export class Play {
     return character;
   }
 
+  get position(): [sceneIndex: number, beatIndex: number] {
+    return [this.#currentSceneIndex, this.#currentBeatIndex];
+  }
+
   start() {
     this.#generator = this.beats();
     this.#generator.next();

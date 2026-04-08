@@ -1,15 +1,37 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Chat } from "@ai-sdk/svelte";
+  import { Experimental_StructuredObject } from "@ai-sdk/svelte";
   import type { PageProps } from "./$types";
   import { Play } from "$lib/screenplay/screenplay";
+  import { actorOutputSchema, teacherOutputSchema } from "$lib/ai/schema";
   import type { GaboUIMessage } from "$lib/ai/meta";
 
   let { data }: PageProps = $props();
 
-  const chat = new Chat<GaboUIMessage>({
-    onError: (error) => console.error("Chat error:", error),
-    onFinish: (arg) => {
+  const actorStructuredObject = new Experimental_StructuredObject({
+    api: "/api/actor",
+    schema: actorOutputSchema,
+    onFinish: (output) => {
+      if (output.object === undefined) return;
+      messages.push({
+        id: crypto.randomUUID(),
+        parts: [{ type: "text", text: output.object.text }],
+        role: "assistant",
+      });
+      scrollToChatEnd();
+    },
+  });
+
+  const teacherStructuredObject = new Experimental_StructuredObject({
+    api: "/api/teacher",
+    schema: teacherOutputSchema,
+    onFinish: (output) => {
+      if (output.object === undefined) return;
+      messages.push({
+        id: crypto.randomUUID(),
+        parts: [{ type: "text", text: output.object.feedback }],
+        role: "assistant",
+      });
       scrollToChatEnd();
     },
   });
@@ -19,34 +41,39 @@
   let play = $derived(new Play({ screenplay: data.screenplay }));
   let animatedMessageId: string | null = $state(null);
   let animatedMessageLength = $state(0);
-  let messages = $derived(
-    chat.messages.filter((message) => message.metadata?.hidden !== true),
-  );
+  let messages: Array<GaboUIMessage> = $state([]);
 
   onMount(() => {
     play.start();
-    const {slugline, character, beat} = play;
+    const { slugline, character, beat } = play;
 
-    chat.sendMessage({
-      role: "user",
-      parts: [],
-      metadata: {
-        agent: "actor",
-        hidden: true,
-        language: "French",
-        slugline: slugline,
-        role: character.role,
-        actions: beat.actions,
-      },
+    actorStructuredObject.submit({
+      language: "French",
+      slugline,
+      role: character.role,
+      actions: beat.actions,
     });
   });
 
   function onSubmit(event: Event) {
     event.preventDefault();
-    chat.sendMessage({
-      role: "user",
-      parts: [{ type: "text", text: chatInput }],
+
+    const { slugline, character, beat } = play;
+
+    teacherStructuredObject.submit({
+      language: "French",
+      slugline: slugline,
+      role: character.role,
+      actions: beat.actions,
+      input: chatInput,
     });
+
+    messages.push({
+      id: crypto.randomUUID(),
+      parts: [{ type: "text", text: chatInput }],
+      role: "user",
+    });
+
     chatInput = "";
   }
 
@@ -58,7 +85,7 @@
   }
 
   $effect(() => {
-    const lastMessage = chat.messages.at(-1);
+    const lastMessage = messages.at(-1);
 
     if (lastMessage?.id !== animatedMessageId) {
       animatedMessageId = null;
@@ -81,8 +108,6 @@
     }
   });
 </script>
-
-<div>{chat.status}</div>
 
 <ul
   class="grow divide-y divide-gray-300 overflow-y-auto shadow-inner"
@@ -129,17 +154,6 @@
 
 <footer class="pb-7 pt-5 flex-inital border-t border-gray-300 shadow-lg">
   <form onsubmit={onSubmit} class="flex justify-center">
-    <!--input type="hidden" name="chatId" value={openAiChatDemoId} /-->
-    <!--input
-			type="hidden"
-			name="lastHumanMessage"
-			value={data.chat.messages.findLast((message) => message.author === MessageAuthor.HUMAN)}
-		/>
-		<input
-			type="hidden"
-			name="lastAiMessage"
-			value={data.chat.messages.findLast((message) => message.author === MessageAuthor.AI)}
-		/-->
     <label for="chatMessage" class="hidden">Message</label>
     <input
       bind:value={chatInput}

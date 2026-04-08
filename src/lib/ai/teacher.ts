@@ -1,7 +1,7 @@
 import { convertToModelMessages, Output, streamText, type LanguageModel } from "ai";
-import { z } from "zod/v4";
 
 import type { Beat } from "$lib/screenplay/screenplay";
+import { teacherOutputSchema } from "./schema";
 
 export interface TeacherAgentContext {
   model: LanguageModel;
@@ -31,11 +31,6 @@ export async function runTeacherAgent({ model, language, slugline, input, action
         `
       }]
     }]),
-    output: Output.object({
-      schema: z.object({
-        succeeded: z.boolean(),
-        feedback: z.string()
-      })
-    })
+    output: Output.object({ schema: teacherOutputSchema })
   });
 }
