@@ -1,0 +1,25 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+
+
+@keyframes cursor-blink {
+
+	from,
+	to {
+		background-color: transparent;
+	}
+
+	50% {
+		background-color: green;
+	}
+}
+
+.cursor-blink::after {
+	content: '';
+	width: 2px;
+	height: 12px;
+	background: green;
+	margin: 0 0.125rem;
+	display: inline-block;
+	animation: cursor-blink 1s step-end infinite;
+}
