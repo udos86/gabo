@@ -7,30 +7,51 @@
 
   let { data }: PageProps = $props();
 
-  const agentStructuredObject = new Experimental_StructuredObject({
-    api: "/api/agent",
-    schema: agentOutputSchema,
-    onFinish: (output) => {
-      if (output.object === undefined) return;
-      messages.push({
-        id: crypto.randomUUID(),
-        parts: [{ type: "text", text: output.object.text }],
-        role: "assistant",
-        metadata: {
-          agent: output.object.agent,
-          position: play.position,
-        },
-      });
-      scrollToChatEnd();
-    },
-  });
-
   let chatElement: HTMLElement | null = $state(null);
   let chatInput = $state("");
   let play = $derived(new Play({ screenplay: data.screenplay }));
   let animatedMessageId: string | null = $state(null);
   let animatedMessageLength = $state(0);
+  let pendingMessageId: string | null = $derived.by(() => {
+    const pendingMessage = messages.at(-1);
+    return pendingMessage?.metadata?.pending === true
+      ? pendingMessage.id
+      : null;
+  });
   let messages: Array<GaboUIMessage> = $state([]);
+
+  $inspect(pendingMessageId).with(console.log);
+
+  const agentStructuredObject = new Experimental_StructuredObject({
+    api: "/api/agent",
+    schema: agentOutputSchema,
+    onFinish: (output) => {
+      if (output.object === undefined) return;
+      if (pendingMessageId === null) {
+        messages.push({
+          id: crypto.randomUUID(),
+          parts: [{ type: "text", text: output.object.text }],
+          role: "assistant",
+          metadata: {
+            agent: output.object.agent,
+            position: play.position,
+          },
+        });
+      } else {
+        const pendingMessage = messages.find(
+          (message) => message.id === pendingMessageId,
+        );
+        if (pendingMessage === undefined) return;
+        pendingMessage.parts = [{ type: "text", text: output.object.text }];
+        delete pendingMessage.metadata?.pending;
+      }
+
+      if (output.object.agent === "teacher" && output.object.passed) {
+        play.next();
+      }
+      scrollToChatEnd();
+    },
+  });
 
   onMount(() => {
     play.start();
@@ -42,6 +63,17 @@
       slugline,
       role: character.role,
       actions: beat.actions,
+    });
+
+    messages.push({
+      id: crypto.randomUUID(),
+      parts: [{ type: "text", text: "" }],
+      role: "assistant",
+      metadata: {
+        agent: "actor",
+        position: play.position,
+        pending: true,
+      },
     });
   });
 
@@ -95,7 +127,9 @@
         scrollToChatEnd();
       }, 30);
 
-      return () => clearTimeout(timeout);
+      return () => {
+        clearTimeout(timeout);
+      };
     }
   });
 </script>

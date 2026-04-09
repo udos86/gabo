@@ -11,7 +11,7 @@ export type ActorOutput = z.infer<typeof actorOutputSchema>;
 export const teacherOutputSchema = z.object({
   agent: z.literal("teacher"),
   text: z.string(),
-  succeeded: z.boolean(),
+  passed: z.boolean(),
 });
 
 export type TeacherOutput = z.infer<typeof teacherOutputSchema>;
@@ -26,6 +26,7 @@ export type AgentOutput = z.infer<typeof agentOutputSchema>;
 export const messageMetadataSchema = z.object({
   agent: z.enum(["actor", "teacher"]),
   position: z.tuple([z.number(), z.number()]),
+  pending: z.boolean().optional()
 });
 
 export type MessageMetadata = z.infer<typeof messageMetadataSchema>;

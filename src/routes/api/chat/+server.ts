@@ -1,11 +1,11 @@
-import { convertToModelMessages, simulateReadableStream, streamText } from "ai";
+import { convertToModelMessages, Output, simulateReadableStream, streamText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { MockLanguageModelV3 } from "ai/test";
 
 import { OPENAI_API_KEY, MODEL } from '$env/static/private';
 import { runActorAgent } from "$lib/ai/actor.js";
 import { runTeacherAgent } from "$lib/ai/teacher.js";
-import type { GaboUIMessage } from "$lib/ai/schema";
+import { actorOutputSchema, type GaboUIMessage } from "$lib/ai/schema";
 
 const openai = createOpenAI({ apiKey: OPENAI_API_KEY });
 const model = openai(MODEL);
@@ -48,30 +48,14 @@ export async function POST({ request }) {
           stream: simulateReadableStream({
             chunks: [
               { type: 'text-start', id: 'text-1' },
-              { type: 'text-delta', id: 'text-1', delta: 'Hello ' },
-              { type: 'text-delta', id: 'text-1', delta: 'from ' },
-              { type: 'text-delta', id: 'text-1', delta: 'LLM! ' },
-              { type: 'text-delta', id: 'text-1', delta: 'Hello ' },
-              { type: 'text-delta', id: 'text-1', delta: 'from ' },
-              { type: 'text-delta', id: 'text-1', delta: 'LLM! ' },
-              { type: 'text-delta', id: 'text-1', delta: 'Hello ' },
-              { type: 'text-delta', id: 'text-1', delta: 'from ' },
-              { type: 'text-delta', id: 'text-1', delta: 'LLM! ' },
-              { type: 'text-delta', id: 'text-1', delta: 'Hello ' },
-              { type: 'text-delta', id: 'text-1', delta: 'from ' },
-              { type: 'text-delta', id: 'text-1', delta: 'LLM! ' },
-              { type: 'text-delta', id: 'text-1', delta: 'Hello ' },
-              { type: 'text-delta', id: 'text-1', delta: 'from ' },
-              { type: 'text-delta', id: 'text-1', delta: 'LLM! ' },
-              { type: 'text-delta', id: 'text-1', delta: 'Hello ' },
-              { type: 'text-delta', id: 'text-1', delta: 'from ' },
-              { type: 'text-delta', id: 'text-1', delta: 'LLM! ' },
-              { type: 'text-delta', id: 'text-1', delta: 'Hello ' },
-              { type: 'text-delta', id: 'text-1', delta: 'from ' },
-              { type: 'text-delta', id: 'text-1', delta: 'LLM! ' },
-              { type: 'text-delta', id: 'text-1', delta: 'Hello ' },
-              { type: 'text-delta', id: 'text-1', delta: 'from ' },
-              { type: 'text-delta', id: 'text-1', delta: 'LLM! ' },
+              { type: 'text-delta', id: 'text-1', delta: '{ ' },
+              { type: 'text-delta', id: 'text-1', delta: '"text": ' },
+              { type: 'text-delta', id: 'text-1', delta: `"Hello, ` },
+              { type: 'text-delta', id: 'text-1', delta: `world` },
+              { type: 'text-delta', id: 'text-1', delta: `!"` },
+              { type: 'text-delta', id: 'text-1', delta: '"agent": ' },
+              { type: 'text-delta', id: 'text-1', delta: `"actor"` },
+              { type: 'text-delta', id: 'text-1', delta: ' }' },
               { type: 'text-end', id: 'text-1' },
               {
                 type: 'finish',
@@ -95,6 +79,7 @@ export async function POST({ request }) {
           }),
         }),
       }),
+      output: Output.object({ schema: actorOutputSchema }),
       prompt: await convertToModelMessages(messages),
     });
   }
