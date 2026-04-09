@@ -5,7 +5,7 @@ import { MockLanguageModelV3 } from "ai/test";
 import { OPENAI_API_KEY, MODEL } from '$env/static/private';
 import { runActorAgent } from "$lib/ai/actor.js";
 import { runTeacherAgent } from "$lib/ai/teacher.js";
-import type { GaboUIMessage } from "$lib/ai/meta";
+import type { GaboUIMessage } from "$lib/ai/schema";
 
 const openai = createOpenAI({ apiKey: OPENAI_API_KEY });
 const model = openai(MODEL);

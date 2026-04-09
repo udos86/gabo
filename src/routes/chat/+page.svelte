@@ -3,34 +3,23 @@
   import { Experimental_StructuredObject } from "@ai-sdk/svelte";
   import type { PageProps } from "./$types";
   import { Play } from "$lib/screenplay/screenplay";
-  import { actorOutputSchema, teacherOutputSchema } from "$lib/ai/schema";
-  import type { GaboUIMessage } from "$lib/ai/meta";
+  import { agentOutputSchema, type GaboUIMessage } from "$lib/ai/schema";
 
   let { data }: PageProps = $props();
 
-  const actorStructuredObject = new Experimental_StructuredObject({
-    api: "/api/actor",
-    schema: actorOutputSchema,
+  const agentStructuredObject = new Experimental_StructuredObject({
+    api: "/api/agent",
+    schema: agentOutputSchema,
     onFinish: (output) => {
       if (output.object === undefined) return;
       messages.push({
         id: crypto.randomUUID(),
         parts: [{ type: "text", text: output.object.text }],
         role: "assistant",
-      });
-      scrollToChatEnd();
-    },
-  });
-
-  const teacherStructuredObject = new Experimental_StructuredObject({
-    api: "/api/teacher",
-    schema: teacherOutputSchema,
-    onFinish: (output) => {
-      if (output.object === undefined) return;
-      messages.push({
-        id: crypto.randomUUID(),
-        parts: [{ type: "text", text: output.object.feedback }],
-        role: "assistant",
+        metadata: {
+          agent: output.object.agent,
+          position: play.position,
+        },
       });
       scrollToChatEnd();
     },
@@ -47,7 +36,8 @@
     play.start();
     const { slugline, character, beat } = play;
 
-    actorStructuredObject.submit({
+    agentStructuredObject.submit({
+      agent: "actor",
       language: "French",
       slugline,
       role: character.role,
@@ -60,7 +50,8 @@
 
     const { slugline, character, beat } = play;
 
-    teacherStructuredObject.submit({
+    agentStructuredObject.submit({
+      agent: "teacher",
       language: "French",
       slugline: slugline,
       role: character.role,
