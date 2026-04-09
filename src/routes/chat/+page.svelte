@@ -82,6 +82,14 @@
 
     const { slugline, character, beat } = play;
 
+    messages.push({
+      id: crypto.randomUUID(),
+      parts: [{ type: "text", text: chatInput }],
+      role: "user",
+    });
+
+    chatInput = "";
+
     agentStructuredObject.submit({
       agent: "teacher",
       language: "French",
@@ -93,11 +101,14 @@
 
     messages.push({
       id: crypto.randomUUID(),
-      parts: [{ type: "text", text: chatInput }],
-      role: "user",
+      parts: [{ type: "text", text: "" }],
+      role: "assistant",
+      metadata: {
+        agent: "teacher",
+        position: play.position,
+        pending: true,
+      },
     });
-
-    chatInput = "";
   }
 
   function scrollToChatEnd() {
@@ -139,16 +150,16 @@
   bind:this={chatElement}
 >
   {#each messages as message (message.id)}
-    <li class="flex items-start even:bg-gray-100 p-4">
+    <li class="flex items-center even:bg-gray-100 p-4">
       {#if message.role === "user"}
-        <!--img
-					width="24"
-					height="24"
-					src="/blank_avatar.svg"
+        <img
+					width="64"
+					height="64"
+					src="/user.png"
 					alt="avatar"
 					class="rounded-full border border-slate-500"
-				/-->
-        <span class="font-bold">User: </span>
+				/>
+        <!--span class="font-bold">User: </span-->
       {/if}
       {#if message.role === "assistant"}
         <img
@@ -164,9 +175,10 @@
         {#if part.type === "text"}
           {#if animatedMessageId === message.id}
             <span class="grow max-w-lg ml-2">
-              {part.text.slice(0, animatedMessageLength)}<span
-                class="animate-pulse">▊</span
-              >
+              {part.text.slice(0, animatedMessageLength)}
+              {#if message.metadata?.pending || animatedMessageLength < part.text.length}
+                <span class="animate-pulse">▊</span>
+              {/if}
             </span>
           {:else}
             <span class="grow max-w-lg ml-2">{part.text}</span>
