@@ -24,7 +24,7 @@ export const agentOutputSchema = z.discriminatedUnion("agent", [
 export type AgentOutput = z.infer<typeof agentOutputSchema>;
 
 export const messageMetadataSchema = z.object({
-  agent: z.enum(["actor", "teacher"]),
+  agent: z.enum(["actor", "teacher"]).optional(),
   position: z.tuple([z.number(), z.number()]),
   pending: z.boolean().optional()
 });

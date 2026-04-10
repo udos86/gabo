@@ -26,6 +26,7 @@
     api: "/api/agent",
     schema: agentOutputSchema,
     onFinish: (output) => {
+      scrollToChatEnd();
       if (output.object === undefined) return;
       if (pendingMessageId === null) {
         messages.push({
@@ -46,15 +47,15 @@
         delete pendingMessage.metadata?.pending;
       }
 
-      if (output.object.agent === "teacher" && output.object.passed) {
-        play.next();
-      }
+      if (output.object.agent === "teacher" && output.object.passed) turn();
       scrollToChatEnd();
     },
   });
 
-  onMount(() => {
-    play.start();
+  onMount(() => turn());
+
+  function turn() {
+    play.next();
     const { slugline, character, beat } = play;
 
     agentStructuredObject.submit({
@@ -75,20 +76,22 @@
         pending: true,
       },
     });
-  });
+
+    play.next();
+  }
 
   function onSubmit(event: Event) {
     event.preventDefault();
-
     const { slugline, character, beat } = play;
 
     messages.push({
       id: crypto.randomUUID(),
       parts: [{ type: "text", text: chatInput }],
       role: "user",
+      metadata: {
+        position: play.position,
+      },
     });
-
-    chatInput = "";
 
     agentStructuredObject.submit({
       agent: "teacher",
@@ -98,6 +101,8 @@
       actions: beat.actions,
       input: chatInput,
     });
+
+    chatInput = "";
 
     messages.push({
       id: crypto.randomUUID(),
@@ -150,15 +155,19 @@
   bind:this={chatElement}
 >
   {#each messages as message (message.id)}
-    <li class="flex items-center even:bg-gray-100 p-4">
+    <li
+      class="flex items-center even:bg-gray-100 p-4 {message.role === 'user'
+        ? 'flex-row-reverse'
+        : ''}"
+    >
       {#if message.role === "user"}
         <img
-					width="64"
-					height="64"
-					src="/user.png"
-					alt="avatar"
-					class="rounded-full border border-slate-500"
-				/>
+          width="64"
+          height="64"
+          src="/user.png"
+          alt="avatar"
+          class="rounded-full border border-slate-500"
+        />
         <!--span class="font-bold">User: </span-->
       {/if}
       {#if message.role === "assistant"}
@@ -174,14 +183,22 @@
       {#each message.parts as part, index (index)}
         {#if part.type === "text"}
           {#if animatedMessageId === message.id}
-            <span class="grow max-w-lg ml-2">
+            <span
+              class="grow max-w-lg mx-2 {message.role === 'user'
+                ? 'text-right'
+                : ''}"
+            >
               {part.text.slice(0, animatedMessageLength)}
               {#if message.metadata?.pending || animatedMessageLength < part.text.length}
                 <span class="animate-pulse">▊</span>
               {/if}
             </span>
           {:else}
-            <span class="grow max-w-lg ml-2">{part.text}</span>
+            <span
+              class="grow max-w-lg mx-2 {message.role === 'user'
+                ? 'text-right'
+                : ''}">{part.text}</span
+            >
           {/if}
         {/if}
       {/each}

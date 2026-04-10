@@ -68,13 +68,8 @@ export class Play {
     return [this.#currentSceneIndex, this.#currentBeatIndex];
   }
 
-  start() {
-    this.#generator = this.beats();
-    this.#generator.next();
-  }
-
   next(): boolean {
-    if (this.#generator === null) throw new Error('Call start() first');
+    if (this.#generator === null) this.#generator = this.beats();
     const result = this.#generator.next();
     return !result.done;
   }
