@@ -66,12 +66,13 @@
         delete message.metadata?.pending;
       }
 
-      if (output.object.agent === "teacher" && output.object.passed) {
-        await waitForMessageAnimation(message.id);
-        nextTurn();
+      if (output.object.agent === "teacher" && !output.object.passed) {
+        // End the lesson
+        return;
       }
 
-      scrollToChatEnd();
+      await waitForMessageAnimation(message.id);
+      nextTurn();
     },
   });
 
@@ -79,36 +80,34 @@
 
   function nextTurn() {
     play.next();
-    const { slugline, character, beat } = play;
+    const { beat, character, slugline } = play;
 
-    // request actor response
-    agentStructuredObject.submit({
-      agent: "actor",
-      language: "French",
-      slugline,
-      role: character.role,
-      actions: beat.actions,
-    });
-
-    // add pending actor message
-    messages.push({
-      id: crypto.randomUUID(),
-      parts: [{ type: "text", text: "" }],
-      role: "assistant",
-      metadata: {
+    if (character.actor === "assistant") {
+      // request actor response
+      agentStructuredObject.submit({
         agent: "actor",
-        position: play.position,
-        pending: true,
-      },
-    });
-
-    play.next();
+        language: "French",
+        slugline,
+        role: character.role,
+        actions: beat.actions,
+      });
+      // add pending actor message
+      messages.push({
+        id: crypto.randomUUID(),
+        parts: [{ type: "text", text: "" }],
+        role: "assistant",
+        metadata: {
+          agent: "actor",
+          position: play.position,
+          pending: true,
+        },
+      });
+    }
   }
 
   function onSubmit(event: Event) {
     event.preventDefault();
     const { slugline, character, beat, position } = play;
-
     // add user message
     messages.push({
       id: crypto.randomUUID(),
@@ -118,7 +117,6 @@
         position,
       },
     });
-
     // request teacher response
     agentStructuredObject.submit({
       agent: "teacher",
@@ -128,9 +126,6 @@
       actions: beat.actions,
       input: chatInput,
     });
-
-    chatInput = "";
-
     // add pending teacher message
     messages.push({
       id: crypto.randomUUID(),
@@ -142,6 +137,8 @@
         pending: true,
       },
     });
+    // clear input
+    chatInput = "";
   }
 
   function scrollToChatEnd() {
@@ -226,7 +223,7 @@
             <span
               class="grow max-w-lg mx-2 {message.role === 'user'
                 ? 'text-right'
-                : ''}">{part.text}</span
+                : ''}">{part.text} | {message.metadata?.position}</span
             >
           {/if}
         {/if}

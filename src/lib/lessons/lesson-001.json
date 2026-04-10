@@ -2,14 +2,14 @@
   "characters": {
     "4711": {
       "id": "4711",
-      "chatRole": "Assistant",
+      "actor": "assistant",
       "name": null,
       "role": "Waiter",
       "avatarUrl": "/waiter.png"
     },
     "0815": {
       "id": "0815",
-      "chatRole": "User",
+      "actor": "user",
       "name": null,
       "role": "Tourist",
       "avatarUrl": "/tourist.png"

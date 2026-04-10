@@ -1,7 +1,7 @@
 
 export interface Character {
   id: string;
-  chatRole: 'Assistant' | 'User';
+  actor: 'assistant' | 'user';
   name: string | null;
   role: string;
   avatarUrl: string;
