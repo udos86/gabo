@@ -12,7 +12,7 @@
   let play = $derived(new Play({ screenplay: data.screenplay }));
   let animatedMessageId: string | null = $state(null);
   let animatedMessageLength = $state(0);
-  let turnPending = $state(false);
+  let animationResolvers = new Map<string, () => void>();
   let pendingMessageId: string | null = $derived.by(() => {
     const pendingMessage = messages.at(-1);
     return pendingMessage?.metadata?.pending === true
@@ -21,12 +21,29 @@
   });
   let messages: Array<GaboUIMessage> = $state([]);
 
+  function waitForMessageAnimation(messageId: string): Promise<void> {
+    return new Promise((resolve) => {
+      const message = messages.find((message) => message.id === messageId);
+      const lastPart = message?.parts.at(-1);
+      const text = lastPart?.type === "text" ? lastPart.text : "";
+
+      if (
+        animatedMessageId === messageId &&
+        animatedMessageLength >= text.length
+      ) {
+        resolve();
+      } else {
+        animationResolvers.set(messageId, resolve);
+      }
+    });
+  }
+
   $inspect(pendingMessageId).with(console.log);
 
   const agentStructuredObject = new Experimental_StructuredObject({
     api: "/api/agent",
     schema: agentOutputSchema,
-    onFinish: (output) => {
+    onFinish: async (output) => {
       scrollToChatEnd();
       if (output.object === undefined) return;
       let message: GaboUIMessage | undefined;
@@ -50,19 +67,21 @@
       }
 
       if (output.object.agent === "teacher" && output.object.passed) {
-        turnPending = true;
+        await waitForMessageAnimation(message.id);
+        nextTurn();
       }
 
       scrollToChatEnd();
     },
   });
 
-  onMount(() => turn());
+  onMount(() => nextTurn());
 
-  function turn() {
+  function nextTurn() {
     play.next();
     const { slugline, character, beat } = play;
 
+    // request actor response
     agentStructuredObject.submit({
       agent: "actor",
       language: "French",
@@ -71,6 +90,7 @@
       actions: beat.actions,
     });
 
+    // add pending actor message
     messages.push({
       id: crypto.randomUUID(),
       parts: [{ type: "text", text: "" }],
@@ -87,17 +107,19 @@
 
   function onSubmit(event: Event) {
     event.preventDefault();
-    const { slugline, character, beat } = play;
+    const { slugline, character, beat, position } = play;
 
+    // add user message
     messages.push({
       id: crypto.randomUUID(),
       parts: [{ type: "text", text: chatInput }],
       role: "user",
       metadata: {
-        position: play.position,
+        position,
       },
     });
 
+    // request teacher response
     agentStructuredObject.submit({
       agent: "teacher",
       language: "French",
@@ -109,13 +131,14 @@
 
     chatInput = "";
 
+    // add pending teacher message
     messages.push({
       id: crypto.randomUUID(),
       parts: [{ type: "text", text: "" }],
       role: "assistant",
       metadata: {
         agent: "teacher",
-        position: play.position,
+        position,
         pending: true,
       },
     });
@@ -132,6 +155,10 @@
     const lastMessage = messages.at(-1);
 
     if (lastMessage?.id !== animatedMessageId) {
+      if (animatedMessageId && animationResolvers.has(animatedMessageId)) {
+        animationResolvers.get(animatedMessageId)!();
+        animationResolvers.delete(animatedMessageId);
+      }
       animatedMessageId = null;
       animatedMessageLength = 0;
     }
@@ -147,9 +174,9 @@
       return () => clearTimeout(timeout);
     }
 
-    if (turnPending) {
-      turnPending = false;
-      turn();
+    if (animationResolvers.has(lastMessage.id)) {
+      animationResolvers.get(lastMessage.id)!();
+      animationResolvers.delete(lastMessage.id);
     }
   });
 </script>
@@ -172,7 +199,6 @@
           alt="avatar"
           class="rounded-full border border-slate-500"
         />
-        <!--span class="font-bold">User: </span-->
       {/if}
       {#if message.role === "assistant"}
         <img
@@ -182,7 +208,6 @@
           alt="avatar"
           class="rounded-full border border-slate-500"
         />
-        <!--span class="font-bold">{message.metadata?.role}: </span-->
       {/if}
       {#each message.parts as part, index (index)}
         {#if part.type === "text"}
