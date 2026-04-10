@@ -12,6 +12,7 @@
   let play = $derived(new Play({ screenplay: data.screenplay }));
   let animatedMessageId: string | null = $state(null);
   let animatedMessageLength = $state(0);
+  let turnPending = $state(false);
   let pendingMessageId: string | null = $derived.by(() => {
     const pendingMessage = messages.at(-1);
     return pendingMessage?.metadata?.pending === true
@@ -28,8 +29,10 @@
     onFinish: (output) => {
       scrollToChatEnd();
       if (output.object === undefined) return;
+      let message: GaboUIMessage | undefined;
+
       if (pendingMessageId === null) {
-        messages.push({
+        message = {
           id: crypto.randomUUID(),
           parts: [{ type: "text", text: output.object.text }],
           role: "assistant",
@@ -37,17 +40,19 @@
             agent: output.object.agent,
             position: play.position,
           },
-        });
+        };
+        messages.push(message);
       } else {
-        const pendingMessage = messages.find(
-          (message) => message.id === pendingMessageId,
-        );
-        if (pendingMessage === undefined) return;
-        pendingMessage.parts = [{ type: "text", text: output.object.text }];
-        delete pendingMessage.metadata?.pending;
+        message = messages.find((message) => message.id === pendingMessageId);
+        if (message === undefined) return;
+        message.parts = [{ type: "text", text: output.object.text }];
+        delete message.metadata?.pending;
       }
 
-      if (output.object.agent === "teacher" && output.object.passed) turn();
+      if (output.object.agent === "teacher" && output.object.passed) {
+        turnPending = true;
+      }
+
       scrollToChatEnd();
     },
   });
@@ -138,14 +143,13 @@
     const text = lastPart?.type === "text" ? lastPart.text : "";
 
     if (animatedMessageLength < text.length) {
-      const timeout = setTimeout(() => {
-        animatedMessageLength++;
-        scrollToChatEnd();
-      }, 30);
+      const timeout = setTimeout(() => animatedMessageLength++, 30);
+      return () => clearTimeout(timeout);
+    }
 
-      return () => {
-        clearTimeout(timeout);
-      };
+    if (turnPending) {
+      turnPending = false;
+      turn();
     }
   });
 </script>
