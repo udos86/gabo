@@ -1,5 +1,4 @@
-import { convertToModelMessages, Output, streamText, type LanguageModel } from "ai";
-import { z } from "zod";
+import { Output, streamText, type LanguageModel } from "ai";
 
 import { actorOutputSchema, type GaboUIMessage } from "$lib/ai/schema";
 import type { Beat, Play } from "$lib/screenplay/screenplay";
