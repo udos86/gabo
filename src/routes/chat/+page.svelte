@@ -4,6 +4,7 @@
   import type { PageProps } from "./$types";
   import { Play } from "$lib/screenplay/screenplay";
   import { agentOutputSchema, type GaboUIMessage } from "$lib/ai/schema";
+  import { fade, fly } from "svelte/transition";
 
   let { data }: PageProps = $props();
 
@@ -44,7 +45,6 @@
     api: "/api/agent",
     schema: agentOutputSchema,
     onFinish: async (output) => {
-      scrollToChatEnd();
       if (output.object === undefined) return;
       let message: GaboUIMessage | undefined;
 
@@ -107,6 +107,7 @@
 
   function onSubmit(event: Event) {
     event.preventDefault();
+    console.log(play.position);
     const { slugline, character, beat, position } = play;
     // add user message
     messages.push({
@@ -150,6 +151,7 @@
 
   $effect(() => {
     const lastMessage = messages.at(-1);
+    scrollToChatEnd();
 
     if (lastMessage?.id !== animatedMessageId) {
       if (animatedMessageId && animationResolvers.has(animatedMessageId)) {
@@ -176,6 +178,13 @@
       animationResolvers.delete(lastMessage.id);
     }
   });
+
+  function messageIn(node: Element, params: { role: string }) {
+    if (params.role === "user") {
+      return fade(node, { duration: 200 });
+    }
+    return fly(node, { y: -60, duration: 200, opacity: 0 });
+  }
 </script>
 
 <ul
@@ -184,7 +193,10 @@
 >
   {#each messages as message (message.id)}
     <li
-      class="flex items-center even:bg-gray-100 p-4 {message.role === 'user'
+      in:messageIn={{ role: message.role }}
+      out:fade={{ duration: 200 }}
+      class="flex items-center even:bg-gray-100 px-12 py-6 {message.role ===
+      'user'
         ? 'flex-row-reverse'
         : ''}"
     >
