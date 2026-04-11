@@ -28,7 +28,7 @@ export async function POST({ request }) {
       slugline,
       role,
       actions,
-      dialog: []
+      dialogue: []
     });
 
   } else if (message.metadata.agent === 'teacher') {

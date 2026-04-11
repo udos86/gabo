@@ -1,8 +1,8 @@
 import { convertToModelMessages, Output, streamText, type LanguageModel } from "ai";
 import { z } from "zod";
 
-import { actorOutputSchema } from "$lib/ai/schema";
-import type { Beat } from "$lib/screenplay/screenplay";
+import { actorOutputSchema, type GaboUIMessage } from "$lib/ai/schema";
+import type { Beat, Play } from "$lib/screenplay/screenplay";
 
 export interface ActorAgentContext {
   model: LanguageModel;
@@ -10,28 +10,60 @@ export interface ActorAgentContext {
   slugline: string;
   role: string;
   actions: Beat['actions'];
-  dialog: string[];
+  dialogue: string;
 }
 
-export async function runActorAgent({ model, language, slugline, role, actions, dialog }: ActorAgentContext) {
+export async function runActorAgent({ model, language, slugline, role, actions, dialogue }: ActorAgentContext) {
   return streamText({
     model,
-    messages: await convertToModelMessages([{
-      role: 'system',
-      parts: [{
-        type: 'text',
-        text: `
-          You are an improvise actor agent.
-          You will improvise a dialog based on a given scene, role and set of actions in ${language}.
-          Do consider the dialog that has already taken place and do not repeat yourself.
-          Return the improvised text as a string.
-          The scene slugline is: ${slugline}
-          The role you play is: ${role}
-          The actions you take are: ${actions.join(', ')}
-          The dialog so far is: ${dialog.join(' ')}
+    messages: [
+      {
+        role: 'system',
+        content: `
+          You are playing the role of ${role} in a screenplay. 
+
+          CONTEXT:
+          - Language: ${language}
+          - Scene slugline: ${slugline}
+
+          YOUR RULES:
+          1. Use the <dialogue-history> provided in the user message to maintain continuity.
+          2. Improvise the next line of dialogue based on the <actions> provided.
+          3. Match the tone and emotional flow of the existing conversation.
+          4. Output ONLY the dialogue text. 
+          5. Do NOT include your character's name, parentheticals (like "(angrily)"), or stage directions.
+
+          You are now in character.
         `
-      }]
-    }]),
+      },
+      {
+        role: 'user',
+        content: `
+          <dialogue-history>
+            ${dialogue}
+          </dialogue-history>
+
+          <actions>
+            ${actions.join(', ')}
+          </actions>
+
+          ${role}:`
+      }
+    ],
     output: Output.object({ schema: actorOutputSchema })
   });
+
+}
+
+export function convertToDialog(messages: Array<GaboUIMessage>, play: Play) {
+  return messages
+    .filter(({ role, metadata }) => role === "user" || metadata?.agent === "actor")
+    .filter(({ parts }) => parts.some((part) => part.type === "text"))
+    .map(({ parts, metadata }) => {
+      const textPart = parts.find((part) => part.type === "text")!;
+      const character = play.getCharacterAtPosition(metadata!.position);
+      return { text: textPart.text, character };
+    })
+    .map(({ text, character }) => `${character.role}: ${text}`)
+    .join('\n');
 }

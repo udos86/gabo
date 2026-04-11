@@ -5,6 +5,7 @@
   import { Play } from "$lib/screenplay/screenplay";
   import { agentOutputSchema, type GaboUIMessage } from "$lib/ai/schema";
   import { fade, fly } from "svelte/transition";
+  import { convertToDialog } from "$lib/ai/actor";
 
   let { data }: PageProps = $props();
 
@@ -79,7 +80,8 @@
   onMount(() => nextTurn());
 
   function nextTurn() {
-    play.next();
+    const done = play.next();
+    if (done) return;
     const { beat, character, slugline } = play;
 
     if (character.actor === "assistant") {
@@ -90,6 +92,7 @@
         slugline,
         role: character.role,
         actions: beat.actions,
+        dialog: convertToDialog(messages, play),
       });
       // add pending actor message
       messages.push({
@@ -107,7 +110,6 @@
 
   function onSubmit(event: Event) {
     event.preventDefault();
-    console.log(play.position);
     const { slugline, character, beat, position } = play;
     // add user message
     messages.push({
@@ -213,7 +215,9 @@
         <img
           width="64"
           height="64"
-          src="/waiter.png"
+          src={message.metadata?.agent === "actor"
+            ? "/waiter.png"
+            : "/teacher.png"}
           alt="avatar"
           class="rounded-full border border-slate-500"
         />

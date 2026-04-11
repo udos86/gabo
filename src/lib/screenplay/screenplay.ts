@@ -68,29 +68,42 @@ export class Play {
     return [this.#currentSceneIndex, this.#currentBeatIndex];
   }
 
+  getCharacterAtPosition(position: [sceneIndex: number, beatIndex: number]): Character {
+    const [sceneIndex, beatIndex] = position;
+    const character = this.#screenplay.scenes[sceneIndex]?.dialog[beatIndex]?.character;
+    if (character === undefined) throw new Error(`Character with id ${character} not found in screenplay.`);
+    return this.#screenplay.characters[character]!;
+  }
+
   next(): boolean {
     if (this.#generator === null) this.#generator = this.beats();
     const result = this.#generator.next();
-    return !result.done;
+    return result.done ?? false;
   }
 
-  theEnd(): boolean {
-    return this.#currentSceneIndex >= this.#screenplay.scenes.length;
+  end(): boolean {
+    if (this.#currentSceneIndex < 0) return false;
+    const isLastScene = this.#currentSceneIndex === this.#screenplay.scenes.length - 1;
+    const isLastBeat = isLastScene && this.#currentBeatIndex === this.scene.dialog.length - 1;
+    return isLastBeat;
   }
 
   *beats() {
-    this.#currentSceneIndex = this.#sceneStartIndex;
+    let sceneIndex = this.#sceneStartIndex;
 
-    while (this.#currentSceneIndex < this.#screenplay.scenes.length) {
-      this.#currentBeatIndex = this.#beatStartIndex;
-      const dialog = this.scene.dialog;
+    while (sceneIndex < this.#screenplay.scenes.length) {
+      let beatIndex = sceneIndex === this.#sceneStartIndex ? this.#beatStartIndex : 0;
+      const dialog = this.#screenplay.scenes[sceneIndex]!.dialog;
 
-      while (this.#currentBeatIndex < dialog.length) {
+      while (beatIndex < dialog.length) {
+        this.#currentSceneIndex = sceneIndex;
+        this.#currentBeatIndex = beatIndex;
+
         const { actions } = this.beat;
         yield { actions, character: this.character, beatIndex: this.#currentBeatIndex, sceneIndex: this.#currentSceneIndex };
-        this.#currentBeatIndex++;
+        beatIndex++;
       }
-      this.#currentSceneIndex++;
+      sceneIndex++;
     }
   }
 }
