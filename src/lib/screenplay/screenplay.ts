@@ -1,9 +1,13 @@
 
+export interface CharacterRole {
+  name: string;
+  description: string;
+}
+
 export interface Character {
   id: string;
   actor: 'assistant' | 'user';
-  name: string | null;
-  role: string;
+  role: CharacterRole;
   avatarUrl: string;
 }
 

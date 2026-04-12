@@ -5,7 +5,7 @@
   import { Play } from "$lib/screenplay/screenplay";
   import { agentOutputSchema, type GaboUIMessage } from "$lib/ai/schema";
   import { fade, fly } from "svelte/transition";
-  import { convertToDialog } from "$lib/ai/actor";
+  import { convertToDialogue } from "$lib/ai/actor";
 
   let { data }: PageProps = $props();
 
@@ -92,7 +92,7 @@
         slugline,
         role: character.role,
         actions: beat.actions,
-        dialog: convertToDialog(messages, play),
+        dialogue: convertToDialogue(messages, play),
       });
       // add pending actor message
       messages.push({

@@ -3,15 +3,19 @@
     "4711": {
       "id": "4711",
       "actor": "assistant",
-      "name": null,
-      "role": "Waiter",
+      "role": {
+        "name": "Waiter",
+        "description": "a professional waiter whose goal is to seat guests and take orders based on their requests."
+      },
       "avatarUrl": "/waiter.png"
     },
     "0815": {
       "id": "0815",
       "actor": "user",
-      "name": null,
-      "role": "Tourist",
+      "role": {
+        "name": "Tourist",
+        "description": "a shy foreign tourist who would like to have something to eat and drink."
+      },
       "avatarUrl": "/tourist.png"
     }
   },
@@ -44,22 +48,20 @@
         {
           "character": "4711",
           "actions": [
-            "ask if the guest would like a table inside or outside",
-            "do not greet again"
+            "ask if the guest would like a table inside or outside"
           ]
         },
         {
           "character": "0815",
           "actions": [
-            "ask for a table inside or outside"
+            "ask for your table preference"
           ]
         },
         {
           "character": "4711",
           "actions": [
             "guide the guest to the table",
-            "give the menu card",
-            "do not ask anything"
+            "give the menu card"
           ]
         }
       ]
