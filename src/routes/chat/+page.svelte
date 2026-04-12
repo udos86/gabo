@@ -25,6 +25,14 @@
   });
   let messages: Array<GaboUIMessage> = $state([]);
 
+  function isMessageAnimating(message: GaboUIMessage) {
+    if (message.metadata?.pending) return true;
+    if (animatedMessageId !== message.id) return false;
+    const lastPart = message.parts.at(-1);
+    const text = lastPart?.type === "text" ? lastPart.text : "";
+    return animatedMessageLength < text.length;
+  }
+
   function waitForMessageAnimation(messageId: string): Promise<void> {
     return new Promise((resolve) => {
       const message = messages.find((message) => message.id === messageId);
@@ -199,7 +207,7 @@
     <li
       in:messageIn={{ role: message.role }}
       out:fade={{ duration: 200 }}
-      class="flex items-center even:bg-gray-100 px-12 py-6 {message.role ===
+      class="flex items-start even:bg-gray-100 px-12 py-6 {message.role ===
       'user'
         ? 'flex-row-reverse'
         : ''}"
@@ -214,15 +222,27 @@
         />
       {/if}
       {#if message.role === "assistant"}
-        <img
-          width="64"
-          height="64"
-          src={message.metadata?.agent === "actor"
-            ? "/waiter.png"
-            : "/teacher.png"}
-          alt="avatar"
-          class="rounded-full border border-slate-500"
-        />
+        <div class="relative shrink-0">
+          {#if isMessageAnimating(message)}
+            <!-- Outer Glow -->
+            <div
+              class="absolute -inset-1.5 rounded-full bg-indigo-500/20 blur-xl animate-avatar-glow"
+            ></div>
+            <!-- Rotating/Thinking Ring -->
+            <div
+              class="absolute -inset-1 rounded-full border-2 border-transparent border-t-indigo-500 border-l-indigo-300 animate-spin-slow"
+            ></div>
+          {/if}
+          <img
+            width="64"
+            height="64"
+            src={message.metadata?.agent === "actor"
+              ? "/waiter.png"
+              : "/teacher.png"}
+            alt="avatar"
+            class="relative rounded-full border-2 border-white shadow-sm ring-1 ring-gray-300"
+          />
+        </div>
       {/if}
       {#each message.parts as part, index (index)}
         {#if part.type === "text"}
@@ -234,7 +254,7 @@
             >
               {part.text.slice(0, animatedMessageLength)}
               {#if message.metadata?.pending || animatedMessageLength < part.text.length}
-                <span class="animate-pulse">▊</span>
+                <!--span class="animate-pulse">▊</span-->
               {/if}
             </span>
           {:else}
