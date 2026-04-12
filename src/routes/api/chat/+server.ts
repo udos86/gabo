@@ -37,7 +37,7 @@ export async function POST({ request }) {
       language,
       slugline,
       actions,
-      dialog: [],
+      dialogue: [],
       input: message.parts.map(part => part.type === 'text' ? part.text : '').join(' ')
     });
 

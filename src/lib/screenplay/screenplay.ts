@@ -17,7 +17,6 @@ export interface Beat {
 }
 
 export interface Scene {
-  title: string;
   setting: 'INT' | 'EXT';
   location: string;
   time: string;

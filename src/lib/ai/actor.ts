@@ -4,16 +4,15 @@ import { actorOutputSchema, type GaboUIMessage } from "$lib/ai/schema";
 import type { Beat, CharacterRole, Play } from "$lib/screenplay/screenplay";
 
 export interface ActorAgentContext {
-  model: LanguageModel;
-  language: string;
-  slugline: string;
-  role: CharacterRole;
   actions: Beat['actions'];
   dialogue: string;
+  language: string;
+  model: LanguageModel;
+  role: CharacterRole;
+  slugline: string;
 }
 
-export async function runActorAgent({ model, language, slugline, role, actions, dialogue }: ActorAgentContext) {
-  console.log('Received dialogue:', dialogue);
+export async function runActorAgent({ actions, dialogue, language, model, role, slugline }: ActorAgentContext) {
   return streamText({
     model,
     messages: [
@@ -37,8 +36,7 @@ export async function runActorAgent({ model, language, slugline, role, actions, 
           8. Output ONLY the dialogue text. 
           9. Do NOT include your character's name, parentheticals (like "(angrily)"), or stage directions.
 
-          You are now in character.
-        `
+          You are now in character.`
       },
       {
         role: 'user',

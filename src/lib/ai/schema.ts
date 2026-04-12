@@ -25,8 +25,8 @@ export type AgentOutput = z.infer<typeof agentOutputSchema>;
 
 export const messageMetadataSchema = z.object({
   agent: z.enum(["actor", "teacher"]).optional(),
-  position: z.tuple([z.number(), z.number()]),
-  pending: z.boolean().optional()
+  pending: z.boolean().optional(),
+  position: z.tuple([z.number(), z.number()])
 });
 
 export type MessageMetadata = z.infer<typeof messageMetadataSchema>;

@@ -1,11 +1,13 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Experimental_StructuredObject } from "@ai-sdk/svelte";
-  import type { PageProps } from "./$types";
-  import { Play } from "$lib/screenplay/screenplay";
-  import { agentOutputSchema, type GaboUIMessage } from "$lib/ai/schema";
   import { fade, fly } from "svelte/transition";
+  import { Experimental_StructuredObject } from "@ai-sdk/svelte";
+
   import { convertToDialogue } from "$lib/ai/actor";
+  import { agentOutputSchema, type GaboUIMessage } from "$lib/ai/schema";
+  import { Play } from "$lib/screenplay/screenplay";
+
+  import type { PageProps } from "./$types";
 
   let { data }: PageProps = $props();
 
