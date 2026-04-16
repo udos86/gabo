@@ -15,9 +15,10 @@ export async function POST({ request }: { request: Request }) {
   let result;
   switch (body.agent) {
     case "actor": {
+      /*
       const { language, slugline, role, actions, dialogue } = body as ActorAgentContext;
       result = await runActorAgent({ model, language, slugline, role, actions, dialogue });
-      /*
+      */
       await new Promise<void>(resolve => setTimeout(() => resolve(), 3000));
       result = streamText({
         model: new MockLanguageModelV3({
@@ -83,7 +84,6 @@ export async function POST({ request }: { request: Request }) {
         output: Output.object({ schema: actorOutputSchema }),
         prompt: [{ role: 'assistant', content: '' }]
       });
-      */
       break;
     }
     case "teacher": {

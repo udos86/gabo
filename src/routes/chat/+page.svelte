@@ -200,14 +200,14 @@
 </script>
 
 <ul
-  class="grow divide-y divide-gray-300 overflow-y-auto shadow-inner"
+  class="grow divide-y divide-gray-300 overflow-y-auto pt-8 shadow-inner"
   bind:this={chatElement}
 >
   {#each messages as message (message.id)}
     <li
       in:messageIn={{ role: message.role }}
       out:fade={{ duration: 200 }}
-      class="flex items-start even:bg-gray-100 px-12 py-6 {message.role ===
+      class="flex items-start gap-4 even:bg-gray-100 px-12 py-6 {message.role ===
       'user'
         ? 'flex-row-reverse'
         : ''}"
@@ -261,7 +261,7 @@
             <span
               class="grow max-w-lg mx-2 {message.role === 'user'
                 ? 'text-right'
-                : ''}">{part.text} | {message.metadata?.position}</span
+                : ''}">{part.text}</span
             >
           {/if}
         {/if}
