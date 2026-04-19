@@ -21,6 +21,7 @@ export interface Scene {
   setting: 'INT' | 'EXT';
   location: string;
   time: string;
+  characters: Character['id'][];
   dialog: Array<Beat>;
 }
 
@@ -70,13 +71,12 @@ export class Play {
 
   get others(): Character[] {
     const characterId = this.beat.character;
-    return Object.values(this.#screenplay.characters).filter(character => character.id !== characterId);
+    return this.scene.characters.map(id => this.#screenplay.characters[id]!).filter(character => character.id !== characterId);
   }
 
   get position(): [sceneIndex: number, beatIndex: number] {
     return [this.#currentSceneIndex, this.#currentBeatIndex];
   }
-
 
   getCharacterAtPosition(position: [sceneIndex: number, beatIndex: number]): Character {
     const [sceneIndex, beatIndex] = position;

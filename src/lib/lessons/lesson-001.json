@@ -26,6 +26,10 @@
       "location": "A busy Parisian café",
       "setting": "INT",
       "time": "morning - autumn",
+      "characters": [
+        "4711",
+        "0815"
+      ],
       "dialog": [
         {
           "character": "4711",
@@ -46,6 +50,10 @@
       "location": "A busy Parisian café",
       "setting": "INT",
       "time": "morning - autumn",
+      "characters": [
+        "4711",
+        "0815"
+      ],
       "dialog": [
         {
           "character": "4711",
