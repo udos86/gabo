@@ -59,22 +59,36 @@
       if (output.object === undefined) return;
       let message: GaboUIMessage | undefined;
 
+      const metadata = (() => {
+        switch (output.object.agent) {
+          case "actor":
+            return {
+              agent: "actor",
+              position: play.position,
+            } as const;
+          case "teacher":
+            return {
+              agent: "teacher",
+              position: play.position,
+              passed: output.object.passed,
+            } as const;
+        }
+      })();
+
       if (pendingMessageId === null) {
         message = {
           id: crypto.randomUUID(),
           parts: [{ type: "text", text: output.object.text }],
           role: "assistant",
-          metadata: {
-            agent: output.object.agent,
-            position: play.position,
-          },
+          metadata,
         };
         messages.push(message);
       } else {
         message = messages.find((message) => message.id === pendingMessageId);
         if (message === undefined) return;
         message.parts = [{ type: "text", text: output.object.text }];
-        delete message.metadata?.pending;
+        // delete message.metadata?.pending;
+        message.metadata = metadata;
       }
 
       if (output.object.agent === "teacher" && !output.object.passed) {
@@ -134,9 +148,10 @@
     agentStructuredObject.submit({
       agent: "teacher",
       language: "French",
-      slugline: slugline,
-      role: character.role,
       actions: beat.actions,
+      dialogue: convertToDialogue(messages, play),
+      role: character.role,
+      slugline,
       input: chatInput,
     });
     // add pending teacher message
