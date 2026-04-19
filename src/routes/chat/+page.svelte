@@ -255,7 +255,12 @@
               ? "/waiter.png"
               : "/teacher.png"}
             alt="avatar"
-            class="relative rounded-full border-2 border-white shadow-sm ring-1 ring-gray-300"
+            class="relative rounded-full border-2 border-white shadow-sm transition-all duration-500 {message
+              .metadata?.agent === 'teacher' && !isMessageAnimating(message)
+              ? message.metadata.passed
+                ? 'ring-3 ring-green-600 shadow-lg shadow-green-600/20'
+                : 'ring-3 ring-red-600 shadow-lg shadow-red-600/20'
+              : 'ring-1 ring-gray-300'}"
           />
         </div>
       {/if}

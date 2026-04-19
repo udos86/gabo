@@ -30,13 +30,14 @@ export async function runTeacherAgent({ actions, dialogue, input, language, mode
           - Student role: ${role.description}
 
           YOUR EVALUATION RULES:
-          1. GRAMMAR: check for tense agreement, word order, and spelling.
-          2. CONTEXT: check if the <student-input> logically follows the <dialogue-history>.
-          3. ACTIONS: check if the student fulfilled all points in the provided <actions>.
-          4. NATURALNESS: check if the response is natural and idiomatic.
-          5. TONE: check if the tone is appropriate for the scene.
+          1. Grammar: check for tense agreement, word order, and spelling.
+          2. Context: check if the <student-input> logically follows the <dialogue-history>.
+          3. Actions: check if the student fulfilled all points in the provided <actions>.
+          4. Naturalness: check if the response is natural and idiomatic.
+          5. Tone: check if the tone is appropriate for the scene.
 
           YOUR FEEDBACK RULES:
+          - Always provide feedback in the same language as the student input.
           - If the student passes the excercise, provide significant feedback in 20 words or less.
           - If the student fails the excercise, provide feedback in 40 words or less.
           
