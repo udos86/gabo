@@ -202,76 +202,178 @@
     if (params.role === "user") {
       return fade(node, { duration: 200 });
     }
-    return fly(node, { y: -60, duration: 200, opacity: 0 });
+    return fly(node, { x: -60, duration: 200, opacity: 0 });
   }
 </script>
 
+<style>
+  .speech-bubble {
+    --arrow-w: 6px;
+    --arrow-h: 8px;
+    --bubble-corners: 18px;
+    --border-size: 1px;
+    --text-color: #1e293b;
+    --bubble-color: white;
+    --border-color: #e2e8f0;
+    
+    position: relative;
+    padding: 0.8rem 1.2rem;
+    background: var(--bubble-color);
+    border-radius: var(--bubble-corners);
+    color: var(--text-color);
+    box-shadow: 
+      0 0 0 var(--border-size) var(--border-color),
+      0 4px 6px -1px rgb(0 0 0 / 0.05),
+      0 2px 4px -2px rgb(0 0 0 / 0.05);
+    font-size: 1.05rem;
+    line-height: 1.5;
+    word-break: break-word;
+    transition: all 0.3s ease;
+  }
+
+  /* Role specific themes */
+  .assistant-bubble {
+    --border-color: #94a3b8; /* Slate 400 */
+    /*--bubble-color: #f8fafc; /* Slate 50 */
+    margin-right: auto;
+  }
+
+  .user-bubble {
+    --border-color: #94a3b8; /* Slate 400 */
+    /*--bubble-color: #f8fafc; /* Slate 50 */
+    margin-left: auto;
+  }
+
+  /* Common tail parts */
+  .speech-bubble:before,
+  .speech-bubble:after {
+    content: "";
+    position: absolute;
+    border-style: solid;
+    display: block;
+    width: 0;
+    height: 0;
+  }
+
+  /* Left tail (Assistant) */
+  .speech-bubble.l:after {
+    border-color: transparent var(--bubble-color) transparent transparent;
+    border-width: var(--arrow-w) var(--arrow-h);
+    top: 20px;
+    left: calc(-1 * var(--arrow-h) * 2 + 1px);
+  }
+
+  .speech-bubble.l:before {
+    border-width: calc(var(--arrow-w) + var(--border-size)) calc(var(--arrow-h) + var(--border-size));
+    border-color: transparent var(--border-color) transparent transparent;
+    top: calc(20px - var(--border-size));
+    left: calc(-1 * var(--arrow-h) * 2 - 2 * var(--border-size));
+  }
+
+  /* Right tail (User) */
+  .speech-bubble.r:after {
+    border-color: transparent transparent transparent var(--bubble-color);
+    border-width: var(--arrow-w) var(--arrow-h);
+    top: 20px;
+    right: calc(-1 * var(--arrow-h) * 2 + 1px);
+  }
+
+  .speech-bubble.r:before {
+    border-width: calc(var(--arrow-w) + var(--border-size)) calc(var(--arrow-h) + var(--border-size));
+    border-color: transparent transparent transparent var(--border-color);
+    top: calc(20px - var(--border-size));
+    right: calc(-1 * var(--arrow-h) * 2 - 2 * var(--border-size));
+  }
+
+  /* Teacher feedback colors */
+  .teacher-passed {
+    --border-color: #22c55e; /* Green 500 */
+    --border-size: 2px;
+    --bubble-color: #f0fdf4; /* Green 50 */
+  }
+
+  .teacher-failed {
+    --border-color: #ef4444; /* Red 500 */
+    --border-size: 2px;
+    --bubble-color: #fef2f2; /* Red 50 */
+  }
+
+  /* Pop animation for message entry */
+  .animate-pop {
+    animation: pop-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  @keyframes pop-in {
+    0% { transform: scale(0.9); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+</style>
+
 <ul
-  class="grow divide-y divide-gray-300 overflow-y-auto pt-8 shadow-inner"
+  class="grow overflow-y-auto pt-8 scroll-smooth"
   bind:this={chatElement}
 >
   {#each messages as message (message.id)}
     <li
       in:messageIn={{ role: message.role }}
       out:fade={{ duration: 200 }}
-      class="flex items-start gap-4 even:bg-gray-100 px-12 py-6 {message.role ===
-      'user'
-        ? 'flex-row-reverse'
-        : ''}"
+      class="flex items-start gap-4 px-12 py-6 {message.role === 'user' ? 'flex-row-reverse' : ''}"
     >
       {#if message.role === "user"}
         <img
-          width="64"
-          height="64"
+          width="56"
+          height="56"
           src="/user.png"
           alt="avatar"
-          class="rounded-full border border-slate-500"
+          class="rounded-full border-2 border-slate-300 shadow-sm shrink-0"
         />
       {/if}
       {#if message.role === "assistant"}
         <div class="relative shrink-0">
           {#if isMessageAnimating(message)}
             <!-- Outer Glow -->
-            <div class="absolute -inset-1.5 rounded-full bg-indigo-500/20 blur-xl animate-avatar-glow"></div>
-            <!-- Rotating/Thinking Ring -->
-            <div class="absolute -inset-1 rounded-full border-2 border-transparent border-t-indigo-500 border-l-indigo-300 animate-spin-slow"></div>
+            <div class="absolute -inset-2 rounded-full bg-indigo-500/15 blur-xl animate-avatar-glow"></div>
+            <!-- Thinking Ring -->
+            <div class="absolute -inset-1 rounded-full border-2 border-transparent border-t-indigo-500/60 border-l-indigo-300/60 animate-spin-slow"></div>
           {/if}
           <img
-            width="64"
-            height="64"
+            width="56"
+            height="56"
             src={message.metadata?.agent === "actor"? "/waiter.png": "/teacher.png"}
             alt="avatar"
-            class="relative rounded-full border-2 border-white shadow-sm transition-all duration-500 {message
-              .metadata?.agent === 'teacher' && !isMessageAnimating(message)
-              ? message.metadata.passed
-                ? 'ring-3 ring-green-600 shadow-lg shadow-green-600/20'
-                : 'ring-3 ring-red-600 shadow-lg shadow-red-600/20'
-              : 'ring-1 ring-gray-300'}"
+            class="relative rounded-full border-2 border-white shadow-md transition-all duration-500 ring-1 ring-slate-200 {message
+              .metadata?.agent === 'teacher' && !isMessageAnimating(message)}"
           />
         </div>
       {/if}
-      {#each message.parts as part, index (index)}
-        {#if part.type === "text"}
-          {#if animatedMessageId === message.id}
-            <span
-              class="grow max-w-lg mx-2 {message.role === 'user'
-                ? 'text-right'
-                : ''}"
-            >
-              {part.text.slice(0, animatedMessageLength)}
-              {#if message.metadata?.pending || animatedMessageLength < part.text.length}
-                <!--span class="animate-pulse">▊</span-->
+
+      {#if message.role === "user" || (animatedMessageId === message.id ? animatedMessageLength > 0 : message.parts.some((p) => p.type === "text" && p.text.length > 0))}
+        <div
+          class="speech-bubble max-w-[40%] animate-pop {message.role === 'user'
+            ? 'user-bubble r'
+            : 'assistant-bubble l'} 
+               {message.metadata?.agent === 'teacher' && !isMessageAnimating(message)
+            ? message.metadata.passed
+              ? 'teacher-passed'
+              : 'teacher-failed'
+            : ''}"
+        >
+          {#each message.parts as part, index (index)}
+            {#if part.type === "text"}
+              {#if animatedMessageId === message.id}
+                <div class="transition-all duration-200">
+                  {part.text.slice(0, animatedMessageLength)}
+                  {#if message.metadata?.pending || animatedMessageLength < part.text.length}
+                    <!--span class="inline-block w-1 h-4 ml-1 bg-indigo-400 animate-pulse align-middle"></span-->
+                  {/if}
+                </div>
+              {:else}
+                <div>{part.text}</div>
               {/if}
-            </span>
-          {:else}
-            <span
-              class="grow max-w-lg mx-2 {message.role === 'user'
-                ? 'text-right'
-                : ''}">{part.text}</span
-            >
-          {/if}
-        {/if}
-      {/each}
+            {/if}
+          {/each}
+        </div>
+      {/if}
     </li>
   {/each}
 </ul>
