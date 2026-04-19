@@ -39,10 +39,7 @@
       const lastPart = message?.parts.at(-1);
       const text = lastPart?.type === "text" ? lastPart.text : "";
 
-      if (
-        animatedMessageId === messageId &&
-        animatedMessageLength >= text.length
-      ) {
+      if (animatedMessageId === messageId && animatedMessageLength >= text.length) {
         resolve();
       } else {
         animationResolvers.set(messageId, resolve);
@@ -62,16 +59,9 @@
       const metadata = (() => {
         switch (output.object.agent) {
           case "actor":
-            return {
-              agent: "actor",
-              position: play.position,
-            } as const;
+            return { agent: "actor", position: play.position } as const;
           case "teacher":
-            return {
-              agent: "teacher",
-              position: play.position,
-              passed: output.object.passed,
-            } as const;
+            return { agent: "teacher", position: play.position, passed: output.object.passed } as const;
         }
       })();
 
@@ -242,20 +232,14 @@
         <div class="relative shrink-0">
           {#if isMessageAnimating(message)}
             <!-- Outer Glow -->
-            <div
-              class="absolute -inset-1.5 rounded-full bg-indigo-500/20 blur-xl animate-avatar-glow"
-            ></div>
+            <div class="absolute -inset-1.5 rounded-full bg-indigo-500/20 blur-xl animate-avatar-glow"></div>
             <!-- Rotating/Thinking Ring -->
-            <div
-              class="absolute -inset-1 rounded-full border-2 border-transparent border-t-indigo-500 border-l-indigo-300 animate-spin-slow"
-            ></div>
+            <div class="absolute -inset-1 rounded-full border-2 border-transparent border-t-indigo-500 border-l-indigo-300 animate-spin-slow"></div>
           {/if}
           <img
             width="64"
             height="64"
-            src={message.metadata?.agent === "actor"
-              ? "/waiter.png"
-              : "/teacher.png"}
+            src={message.metadata?.agent === "actor"? "/waiter.png": "/teacher.png"}
             alt="avatar"
             class="relative rounded-full border-2 border-white shadow-sm transition-all duration-500 {message
               .metadata?.agent === 'teacher' && !isMessageAnimating(message)
