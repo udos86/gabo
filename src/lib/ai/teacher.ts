@@ -7,13 +7,14 @@ export interface TeacherAgentContext {
   actions: Beat['actions'];
   dialogue: string;
   input: string;
+  interlocutors: CharacterRole[];
   language: string;
   model: LanguageModel;
   role: CharacterRole;
   slugline: string;
 }
 
-export async function runTeacherAgent({ actions, dialogue, input, language, model, role, slugline }: TeacherAgentContext) {
+export async function runTeacherAgent({ actions, dialogue, input, interlocutors, language, model, role, slugline }: TeacherAgentContext) {
   return streamText({
     model,
     messages: [
@@ -28,10 +29,11 @@ export async function runTeacherAgent({ actions, dialogue, input, language, mode
           - Language: ${language}
           - Scene Slugline: ${slugline}
           - Student role: ${role.description}
+          - Interlocutors: ${interlocutors.map(({ name, description, gender }) => `${name} (${description}, gender: ${gender})`).join(', ')}
 
           YOUR EVALUATION RULES:
           1. Grammar: check for tense agreement, word order, and spelling.
-          2. Context: check if the <student-input> logically follows the <dialogue-history>.
+          2. Context: check if the <student-input> logically follows the <dialogue-history> and correctly addresses the interlocutors.
           3. Actions: check if the student fulfilled all points in the provided <actions>.
           4. Naturalness: check if the response is natural and idiomatic.
           5. Tone: check if the tone is appropriate for the scene.

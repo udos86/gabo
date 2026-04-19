@@ -5,7 +5,8 @@
       "actor": "assistant",
       "role": {
         "name": "Waiter",
-        "description": "a professional waiter whose goal is to seat guests and take orders based on their requests."
+        "description": "a professional waiter whose goal is to seat guests and take orders based on their requests.",
+        "gender": "male"
       },
       "avatarUrl": "/waiter.png"
     },
@@ -14,7 +15,8 @@
       "actor": "user",
       "role": {
         "name": "Tourist",
-        "description": "a shy foreign tourist who would like to have something to eat and drink."
+        "description": "a shy foreign tourist who would like to have something to eat and drink.",
+        "gender": "male"
       },
       "avatarUrl": "/tourist.png"
     }

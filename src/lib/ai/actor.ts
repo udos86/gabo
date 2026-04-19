@@ -6,13 +6,14 @@ import type { Beat, CharacterRole, Play } from "$lib/screenplay/screenplay";
 export interface ActorAgentContext {
   actions: Beat['actions'];
   dialogue: string;
+  interlocutors: CharacterRole[];
   language: string;
   model: LanguageModel;
   role: CharacterRole;
   slugline: string;
 }
 
-export async function runActorAgent({ actions, dialogue, language, model, role, slugline }: ActorAgentContext) {
+export async function runActorAgent({ actions, dialogue, interlocutors, language, model, role, slugline }: ActorAgentContext) {
   return streamText({
     model,
     messages: [
@@ -20,10 +21,11 @@ export async function runActorAgent({ actions, dialogue, language, model, role, 
         role: 'system',
         content: `
           You are playing the following role in a screenplay: ${role.description}.
-
+          
           CONTEXT:
           - Language: ${language}
           - Scene slugline: ${slugline}
+          - Interlocutors: ${interlocutors.map(({ name, description, gender }) => `${name} (${description}, gender: ${gender})`).join(', ')}
 
           YOUR RULES:
           1. Use the <dialogue-history> provided in the user message to maintain continuity.
@@ -35,6 +37,7 @@ export async function runActorAgent({ actions, dialogue, language, model, role, 
           7. Maintain the progression of the scene so that every line moves the interaction forward.
           8. Output ONLY the dialogue text. 
           9. Do NOT include your character's name, parentheticals (like "(angrily)"), or stage directions.
+          10. Pay close attention to gender-specific language (pronouns, terms of address like 'Monsieur'/'Madame', and grammatical agreement) based on your gender (${role.gender}) and the gender of your interlocutors.
 
           You are now in character.`
       },

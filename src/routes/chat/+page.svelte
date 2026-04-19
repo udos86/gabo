@@ -116,6 +116,7 @@
         slugline,
         role: character.role,
         actions: beat.actions,
+        interlocutors: play.others.map(({ role }) => role),
         dialogue: convertToDialogue(messages, play),
       });
       // add pending actor message
@@ -148,11 +149,12 @@
     agentStructuredObject.submit({
       agent: "teacher",
       language: "French",
-      actions: beat.actions,
-      dialogue: convertToDialogue(messages, play),
-      role: character.role,
-      slugline,
       input: chatInput,
+      slugline,
+      role: character.role,
+      actions: beat.actions,
+      interlocutors: play.others.map(({ role }) => role),
+      dialogue: convertToDialogue(messages, play),
     });
     // add pending teacher message
     messages.push({

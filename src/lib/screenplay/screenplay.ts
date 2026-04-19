@@ -2,6 +2,7 @@
 export interface CharacterRole {
   name: string;
   description: string;
+  gender: 'male' | 'female' | 'diverse';
 }
 
 export interface Character {
@@ -67,9 +68,15 @@ export class Play {
     return character;
   }
 
+  get others(): Character[] {
+    const characterId = this.beat.character;
+    return Object.values(this.#screenplay.characters).filter(character => character.id !== characterId);
+  }
+
   get position(): [sceneIndex: number, beatIndex: number] {
     return [this.#currentSceneIndex, this.#currentBeatIndex];
   }
+
 
   getCharacterAtPosition(position: [sceneIndex: number, beatIndex: number]): Character {
     const [sceneIndex, beatIndex] = position;

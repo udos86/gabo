@@ -15,8 +15,8 @@ export async function POST({ request }: { request: Request }) {
   switch (body.agent) {
     case "actor": {
       const model = openai(ACTOR_MODEL);
-      const { language, slugline, role, actions, dialogue } = body as ActorAgentContext;
-      result = await runActorAgent({ model, language, slugline, role, actions, dialogue });
+      const { actions, dialogue, interlocutors, language, role, slugline } = body as ActorAgentContext;
+      result = await runActorAgent({ actions, dialogue, interlocutors, language, model, role, slugline });
       /*
        await new Promise<void>(resolve => setTimeout(() => resolve(), 3000));
        result = streamText({
@@ -88,8 +88,8 @@ export async function POST({ request }: { request: Request }) {
     }
     case "teacher": {
       const model = openai(TEACHER_MODEL);
-      const { actions, dialogue, input, language, role, slugline } = body as TeacherAgentContext;
-      result = await runTeacherAgent({ actions, dialogue, input, language, model, role, slugline });
+      const { actions, dialogue, input, interlocutors, language, role, slugline } = body as TeacherAgentContext;
+      result = await runTeacherAgent({ actions, dialogue, input, language, model, role, slugline, interlocutors });
       /*
       await new Promise<void>(resolve => setTimeout(() => resolve(), 3000));
       result = streamText({
