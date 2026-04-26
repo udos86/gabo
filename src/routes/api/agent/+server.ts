@@ -19,7 +19,7 @@ export async function POST({ request }: { request: Request }) {
       const { actions, dialogue, interlocutors, language, role, slugline } = body as ActorAgentContext;
       result = await runActorAgent({ actions, dialogue, interlocutors, language, model, role, slugline });
       */
-      await new Promise<void>(resolve => setTimeout(() => resolve(), 0));
+      await new Promise<void>(resolve => setTimeout(() => resolve(), 1000));
       result = streamText({
         model: new MockLanguageModelV3({
           doStream: async () => ({
@@ -92,7 +92,7 @@ export async function POST({ request }: { request: Request }) {
       const { actions, dialogue, input, interlocutors, language, role, slugline } = body as TeacherAgentContext;
       result = await runTeacherAgent({ actions, dialogue, input, language, model, role, slugline, interlocutors });
       */
-      await new Promise<void>(resolve => setTimeout(() => resolve(), 0));
+      await new Promise<void>(resolve => setTimeout(() => resolve(), 1000));
       result = streamText({
         model: new MockLanguageModelV3({
           doStream: async () => ({
