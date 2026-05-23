@@ -29,4 +29,4 @@
   {/each}
 </ul>
 
-<ChatInput bind:value={session.chatInput} onSubmit={(e) => session.onSubmit(e)} />
+<ChatInput bind:value={session.chatInput} onSubmit={event => session.onSubmit(event)} />

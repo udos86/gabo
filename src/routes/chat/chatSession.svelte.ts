@@ -29,6 +29,7 @@ export class ChatSession {
   play = $derived.by(() => new Play({ screenplay: this.#getScreenplay() }));
 
   agentStructuredObject: Experimental_StructuredObject<typeof agentOutputSchema>;
+  
   pendingMessageId = $derived.by(() => {
     const pendingMessage = this.messages.at(-1);
     return pendingMessage?.metadata?.pending === true ? pendingMessage.id : null;
@@ -75,10 +76,11 @@ export class ChatSession {
           message.metadata = metadata;
         }
 
-        if (output.object.agent === "teacher" && !output.object.passed) return;
-
         this.animatedMessageId = message.id;
         this.#animationResolver = new Resolver();
+
+        if (output.object.agent === "teacher" && !output.object.passed) return;
+
         this.nextTurn();
       },
     });
@@ -137,15 +139,15 @@ export class ChatSession {
     event.preventDefault();
     const { slugline, character, beat, position } = this.play;
 
+    // Add user message
     this.messages.push({
-      id: crypto.randomUUID(),
+      id: globalThis.crypto.randomUUID(),
       parts: [{ type: "text", text: this.chatInput }],
       role: "user",
-      metadata: {
-        position,
-      },
+      metadata: { position },
     });
 
+    // Request teacher (LLM judge) to evaluate user input
     this.agentStructuredObject.submit({
       agent: "teacher",
       language: "French",
@@ -157,15 +159,12 @@ export class ChatSession {
       dialogue: convertToDialogue(this.messages, this.play),
     });
 
+    // Add pending teacher agent message
     this.messages.push({
-      id: crypto.randomUUID(),
+      id: globalThis.crypto.randomUUID(),
       parts: [{ type: "text", text: "" }],
       role: "assistant",
-      metadata: {
-        agent: "teacher",
-        position,
-        pending: true,
-      },
+      metadata: { agent: "teacher", position, pending: true },
     });
 
     this.chatInput = "";
