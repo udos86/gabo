@@ -14,7 +14,7 @@
   // Scroll to bottom when messages or typewriter length updates
   $effect(() => {
     session.messages;
-    session.animationTick;
+    session.animatedMessageLength;
     chatElement?.scroll({ behavior: 'smooth', top: chatElement.scrollHeight });
   });
 
@@ -23,7 +23,9 @@
 
 <ul class="grow overflow-y-auto pt-8 scroll-smooth" bind:this={chatElement}>
   {#each session.messages as message (message.id)}
-    <ChatBubble {message} animatedLength={session.getAnimatedLength(message)} isAnimating={session.isMessageAnimating(message)} />
+    {@const isAnimating = message.id === session.animatedMessageId}
+    {@const animatedLength = isAnimating ? session.animatedMessageLength : undefined}
+    <ChatBubble {message} {isAnimating} {animatedLength} />
   {/each}
 </ul>
 

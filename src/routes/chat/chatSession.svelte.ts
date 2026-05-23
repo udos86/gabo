@@ -1,8 +1,25 @@
-import { Experimental_StructuredObject } from "@ai-sdk/svelte";
+import { Experimental_StructuredObject, type UIMessage } from "@ai-sdk/svelte";
 
 import { convertToDialogue } from "$lib/ai/actor";
 import { agentOutputSchema, type GaboUIMessage } from "$lib/ai/schema";
 import { Play, type Screenplay } from "$lib/screenplay/screenplay";
+
+class Resolver<Type = void> {
+  #promise: Promise<Type>;
+  // @ts-expect-error - assigned synchronously in the executor
+  resolve: (value: Type | PromiseLike<Type>) => void;
+
+  constructor() {
+    this.#promise = new Promise<Type>(resolve => this.resolve = resolve);
+  }
+
+  then<FulfilledResultType = Type, RejectedResultType = never>(
+    onfulfilled?: ((value: Type) => FulfilledResultType | PromiseLike<FulfilledResultType>) | null,
+    onrejected?: ((reason: any) => RejectedResultType | PromiseLike<RejectedResultType>) | null
+  ): Promise<FulfilledResultType | RejectedResultType> {
+    return this.#promise.then(onfulfilled, onrejected);
+  }
+}
 
 export class ChatSession {
   #getScreenplay: () => Screenplay;
@@ -11,17 +28,16 @@ export class ChatSession {
   chatInput = $state("");
   play = $derived.by(() => new Play({ screenplay: this.#getScreenplay() }));
 
-  animatedMessages = $state<Record<string, number>>({});
-  animationTick = $state(0);
-  #timeouts = new Map<string, ReturnType<typeof setTimeout>>();
-  #animationResolvers = new Map<string, () => void>();
-
+  agentStructuredObject: Experimental_StructuredObject<typeof agentOutputSchema>;
   pendingMessageId = $derived.by(() => {
     const pendingMessage = this.messages.at(-1);
     return pendingMessage?.metadata?.pending === true ? pendingMessage.id : null;
   });
 
-  agentStructuredObject: Experimental_StructuredObject<typeof agentOutputSchema>;
+  animatedMessageId = $state<string | null>(null);
+  animatedMessageLength = $state(0);
+  animatedMessage = $derived(this.messages.find(message => message.id === this.animatedMessageId));
+  #animationResolver: Resolver<void> | null = null;
 
   constructor(getScreenplay: () => Screenplay) {
     this.#getScreenplay = getScreenplay;
@@ -31,7 +47,13 @@ export class ChatSession {
       schema: agentOutputSchema,
       onFinish: async (output) => {
         if (output.object == null) return;
+
+        // Wait for the message to finish animating before we trigger the next turn
+        if (this.#animationResolver instanceof Resolver) await this.#animationResolver;
+
         let message: GaboUIMessage | undefined;
+
+        const parts: UIMessage['parts'] = [{ type: "text", text: output.object.text }];
 
         const metadata = (() => {
           switch (output.object.agent) {
@@ -43,96 +65,42 @@ export class ChatSession {
         })();
 
         if (this.pendingMessageId === null) {
-          message = {
-            id: crypto.randomUUID(),
-            parts: [{ type: "text", text: output.object.text }],
-            role: "assistant",
-            metadata,
-          };
+          const id = globalThis.crypto.randomUUID();
+          message = { id, parts, role: "assistant", metadata };
           this.messages.push(message);
         } else {
-          message = this.messages.find((m) => m.id === this.pendingMessageId);
+          message = this.messages.find(message => message.id === this.pendingMessageId);
           if (message === undefined) return;
-          message.parts = [{ type: "text", text: output.object.text }];
+          message.parts = parts;
           message.metadata = metadata;
         }
 
-        this.startAnimation(message);
+        if (output.object.agent === "teacher" && !output.object.passed) return;
 
-        if (output.object.agent === "teacher" && !output.object.passed) {
-          // End the lesson
-          return;
-        }
-
-        await this.waitForMessageAnimation(message.id);
+        this.animatedMessageId = message.id;
+        this.#animationResolver = new Resolver();
         this.nextTurn();
       },
     });
-  }
 
-  startAnimation(message: GaboUIMessage) {
-    if (message.role !== "assistant") return;
-    const lastPart = message.parts.at(-1);
-    const text = lastPart?.type === "text" ? lastPart.text : "";
-    if (!text) return;
+    $effect(() => {
+      if (this.animatedMessage === undefined) return;
 
-    this.clearAnimation(message.id);
-    this.animatedMessages[message.id] = 0;
-
-    const tick = () => {
-      const current = this.animatedMessages[message.id] ?? 0;
-      if (current < text.length) {
-        this.animatedMessages[message.id] = current + 1;
-        this.animationTick++;
-        const timeout = setTimeout(tick, 30);
-        this.#timeouts.set(message.id, timeout);
-      } else {
-        this.clearAnimation(message.id);
-        if (this.#animationResolvers.has(message.id)) {
-          this.#animationResolvers.get(message.id)!();
-          this.#animationResolvers.delete(message.id);
-        }
-      }
-    };
-    const timeout = setTimeout(tick, 30);
-    this.#timeouts.set(message.id, timeout);
-  }
-
-  clearAnimation(messageId: string) {
-    if (this.#timeouts.has(messageId)) {
-      clearTimeout(this.#timeouts.get(messageId));
-      this.#timeouts.delete(messageId);
-    }
-  }
-
-  isMessageAnimating(message: GaboUIMessage): boolean {
-    if (message.metadata?.pending) return true;
-    if (message.role !== "assistant") return false;
-
-    const lastPart = message.parts.at(-1);
-    const text = lastPart?.type === "text" ? lastPart.text : "";
-    const currentLength = this.animatedMessages[message.id];
-
-    if (currentLength === undefined) return false;
-    return currentLength < text.length;
-  }
-
-  getAnimatedLength(message: GaboUIMessage): number | undefined {
-    return this.animatedMessages[message.id];
-  }
-
-  waitForMessageAnimation(messageId: string): Promise<void> {
-    return new Promise((resolve) => {
-      const message = this.messages.find((m) => m.id === messageId);
-      const lastPart = message?.parts.at(-1);
+      const lastPart = this.animatedMessage.parts.at(-1);
       const text = lastPart?.type === "text" ? lastPart.text : "";
 
-      const currentLength = this.animatedMessages[messageId];
-      if (currentLength !== undefined && currentLength >= text.length) {
-        resolve();
-      } else {
-        this.#animationResolvers.set(messageId, resolve);
+      if (this.animatedMessageLength < text.length) {
+        const timeout = globalThis.setTimeout(() => this.animatedMessageLength++, 30);
+        return () => globalThis.clearTimeout(timeout);
       }
+
+      if (this.#animationResolver instanceof Resolver) {
+        this.#animationResolver.resolve();
+        this.#animationResolver = null;
+      }
+
+      this.animatedMessageId = null;
+      this.animatedMessageLength = 0;
     });
   }
 
@@ -142,7 +110,6 @@ export class ChatSession {
     const { beat, character, slugline } = this.play;
 
     if (character.actor === "assistant") {
-      // request actor response
       this.agentStructuredObject.submit({
         agent: "actor",
         language: "French",
@@ -152,7 +119,7 @@ export class ChatSession {
         interlocutors: this.play.others.map(({ role }) => role),
         dialogue: convertToDialogue(this.messages, this.play),
       });
-      // add pending actor message
+
       this.messages.push({
         id: crypto.randomUUID(),
         parts: [{ type: "text", text: "" }],
@@ -169,7 +136,7 @@ export class ChatSession {
   onSubmit(event: Event) {
     event.preventDefault();
     const { slugline, character, beat, position } = this.play;
-    // add user message
+
     this.messages.push({
       id: crypto.randomUUID(),
       parts: [{ type: "text", text: this.chatInput }],
@@ -178,7 +145,7 @@ export class ChatSession {
         position,
       },
     });
-    // request teacher response
+
     this.agentStructuredObject.submit({
       agent: "teacher",
       language: "French",
@@ -189,7 +156,7 @@ export class ChatSession {
       interlocutors: this.play.others.map(({ role }) => role),
       dialogue: convertToDialogue(this.messages, this.play),
     });
-    // add pending teacher message
+
     this.messages.push({
       id: crypto.randomUUID(),
       parts: [{ type: "text", text: "" }],
@@ -200,7 +167,7 @@ export class ChatSession {
         pending: true,
       },
     });
-    // clear input
+
     this.chatInput = "";
   }
 }
