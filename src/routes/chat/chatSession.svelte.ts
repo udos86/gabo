@@ -11,8 +11,9 @@ export class ChatSession {
   chatInput = $state("");
   play = $derived.by(() => new Play({ screenplay: this.#getScreenplay() }));
 
-  animatedMessageId = $state<string | null>(null);
-  animatedMessageLength = $state(0);
+  animatedMessages = $state<Record<string, number>>({});
+  animationTick = $state(0);
+  #timeouts = new Map<string, ReturnType<typeof setTimeout>>();
   #animationResolvers = new Map<string, () => void>();
 
   pendingMessageId = $derived.by(() => {
@@ -56,6 +57,8 @@ export class ChatSession {
           message.metadata = metadata;
         }
 
+        this.startAnimation(message);
+
         if (output.object.agent === "teacher" && !output.object.passed) {
           // End the lesson
           return;
@@ -65,49 +68,57 @@ export class ChatSession {
         this.nextTurn();
       },
     });
+  }
 
-    $effect(() => {
-      const lastMessage = this.messages.at(-1);
+  startAnimation(message: GaboUIMessage) {
+    if (message.role !== "assistant") return;
+    const lastPart = message.parts.at(-1);
+    const text = lastPart?.type === "text" ? lastPart.text : "";
+    if (!text) return;
 
-      if (lastMessage?.id !== this.animatedMessageId) {
-        if (this.animatedMessageId && this.#animationResolvers.has(this.animatedMessageId)) {
-          this.#animationResolvers.get(this.animatedMessageId)!();
-          this.#animationResolvers.delete(this.animatedMessageId);
+    this.clearAnimation(message.id);
+    this.animatedMessages[message.id] = 0;
+
+    const tick = () => {
+      const current = this.animatedMessages[message.id] ?? 0;
+      if (current < text.length) {
+        this.animatedMessages[message.id] = current + 1;
+        this.animationTick++;
+        const timeout = setTimeout(tick, 30);
+        this.#timeouts.set(message.id, timeout);
+      } else {
+        this.clearAnimation(message.id);
+        if (this.#animationResolvers.has(message.id)) {
+          this.#animationResolvers.get(message.id)!();
+          this.#animationResolvers.delete(message.id);
         }
-        this.animatedMessageId = null;
-        this.animatedMessageLength = 0;
       }
+    };
+    const timeout = setTimeout(tick, 30);
+    this.#timeouts.set(message.id, timeout);
+  }
 
-      if (lastMessage?.role !== "assistant") return;
-
-      this.animatedMessageId = lastMessage.id;
-      const lastPart = lastMessage?.parts.at(-1);
-      const text = lastPart?.type === "text" ? lastPart.text : "";
-
-      if (this.animatedMessageLength < text.length) {
-        const timeout = setTimeout(() => {
-          this.animatedMessageLength++;
-        }, 30);
-        return () => clearTimeout(timeout);
-      }
-
-      if (this.#animationResolvers.has(lastMessage.id)) {
-        this.#animationResolvers.get(lastMessage.id)!();
-        this.#animationResolvers.delete(lastMessage.id);
-      }
-    });
+  clearAnimation(messageId: string) {
+    if (this.#timeouts.has(messageId)) {
+      clearTimeout(this.#timeouts.get(messageId));
+      this.#timeouts.delete(messageId);
+    }
   }
 
   isMessageAnimating(message: GaboUIMessage): boolean {
-    switch (true) {
-      case message.metadata?.pending: return true;
-      case this.animatedMessageId !== message.id: return false;
-      default: {
-        const lastPart = message.parts.at(-1);
-        const text = lastPart?.type === "text" ? lastPart.text : "";
-        return this.animatedMessageLength < text.length;
-      }
-    }
+    if (message.metadata?.pending) return true;
+    if (message.role !== "assistant") return false;
+
+    const lastPart = message.parts.at(-1);
+    const text = lastPart?.type === "text" ? lastPart.text : "";
+    const currentLength = this.animatedMessages[message.id];
+
+    if (currentLength === undefined) return false;
+    return currentLength < text.length;
+  }
+
+  getAnimatedLength(message: GaboUIMessage): number | undefined {
+    return this.animatedMessages[message.id];
   }
 
   waitForMessageAnimation(messageId: string): Promise<void> {
@@ -116,7 +127,8 @@ export class ChatSession {
       const lastPart = message?.parts.at(-1);
       const text = lastPart?.type === "text" ? lastPart.text : "";
 
-      if (this.animatedMessageId === messageId && this.animatedMessageLength >= text.length) {
+      const currentLength = this.animatedMessages[messageId];
+      if (currentLength !== undefined && currentLength >= text.length) {
         resolve();
       } else {
         this.#animationResolvers.set(messageId, resolve);

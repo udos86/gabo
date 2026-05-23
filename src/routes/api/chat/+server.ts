@@ -2,13 +2,13 @@ import { convertToModelMessages, Output, simulateReadableStream, streamText } fr
 import { createOpenAI } from "@ai-sdk/openai";
 import { MockLanguageModelV3 } from "ai/test";
 
-import { OPENAI_API_KEY, MODEL } from '$env/static/private';
+import { OPENAI_API_KEY, ACTOR_MODEL } from '$env/static/private';
 import { runActorAgent } from "$lib/ai/actor.js";
 import { runTeacherAgent } from "$lib/ai/teacher.js";
 import { actorOutputSchema, type GaboUIMessage } from "$lib/ai/schema";
 
 const openai = createOpenAI({ apiKey: OPENAI_API_KEY });
-const model = openai(MODEL);
+const model = openai(ACTOR_MODEL);
 
 export async function POST({ request }) {
   const { messages }: { messages: GaboUIMessage[] } = await request.json();
@@ -17,7 +17,7 @@ export async function POST({ request }) {
   if (message === undefined) throw new Error('No messages provided in request body.');
   if (message.metadata === undefined) throw new Error('Latest message is missing metadata.');
 
-  const { actions, language, slugline, role } = message.metadata;
+  const { actions, language, slugline, role } = message.metadata as any;
 
   let result;
 
@@ -28,7 +28,8 @@ export async function POST({ request }) {
       slugline,
       role,
       actions,
-      dialogue: []
+      dialogue: "",
+      interlocutors: []
     });
 
   } else if (message.metadata.agent === 'teacher') {
@@ -37,8 +38,10 @@ export async function POST({ request }) {
       language,
       slugline,
       actions,
-      dialogue: [],
-      input: message.parts.map(part => part.type === 'text' ? part.text : '').join(' ')
+      dialogue: "",
+      input: message.parts.map(part => part.type === 'text' ? part.text : '').join(' '),
+      interlocutors: [],
+      role: "" as any
     });
 
   } else {
