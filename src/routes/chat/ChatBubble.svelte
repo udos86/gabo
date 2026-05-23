@@ -4,23 +4,23 @@
 
   interface Props {
     message: GaboUIMessage;
-    isAnimating: boolean;
-    animatedMessageId: string | null;
-    animatedMessageLength: number;
+    isAnimating?: boolean;
+    animatedLength?: number;
   }
 
-  let { message, isAnimating, animatedMessageId, animatedMessageLength }: Props = $props();
+  let { message, isAnimating = false, animatedLength }: Props = $props();
+
+  function messageIn(node: Element, params: { role: string }) {
+    return params.role === 'user' ? fade(node, { duration: 200 }) : fly(node, { x: -60, duration: 200, opacity: 0 });
+  }
 
   const isUser = $derived(message.role === 'user');
   const isAssistant = $derived(message.role === 'assistant');
-  const hasTextContent = $derived(message.parts.some(part => part.type === 'text' && part.text.length > 0));
   const avatarSrc = $derived(message.metadata?.agent === 'actor' ? '/waiter.png' : '/teacher.png');
-
-  const isCurrentAnimatedMessage = $derived(animatedMessageId === message.id);
-  const showBubble = $derived(isUser || (isCurrentAnimatedMessage ? animatedMessageLength > 0 : hasTextContent));
+  const hasTextContent = $derived(message.parts.some((part) => part.type === 'text' && part.text.length > 0));
+  const shouldShowBubble = $derived(isUser || (animatedLength === undefined ? hasTextContent : animatedLength > 0));
 
   const liClass = $derived(`flex items-start gap-4 px-12 py-6 ${isUser ? 'flex-row-reverse' : ''}`);
-
   const bubbleClass = $derived.by(() => {
     const base = `speech-bubble max-w-[40%] animate-pop`;
     const alignment = isUser ? 'user-bubble r' : 'assistant-bubble l';
@@ -33,12 +33,8 @@
     return `${base} ${alignment} ${feedback}`.trim();
   });
 
-  function messageIn(node: Element, params: { role: string }) {
-    return params.role === 'user' ? fade(node, { duration: 200 }) : fly(node, { x: -60, duration: 200, opacity: 0 });
-  }
-
   function getPartText(part: Extract<GaboUIMessage['parts'][number], { type: 'text' }>) {
-    return isCurrentAnimatedMessage ? part.text.slice(0, animatedMessageLength) : part.text;
+    return animatedLength !== undefined ? part.text.slice(0, animatedLength) : part.text;
   }
 </script>
 
@@ -58,11 +54,11 @@
     </div>
   {/if}
 
-  {#if showBubble}
+  {#if shouldShowBubble}
     <div class={bubbleClass}>
       {#each message.parts as part, index (index)}
         {#if part.type === 'text'}
-          <div class={isCurrentAnimatedMessage ? 'transition-all duration-200' : ''}>
+          <div class={animatedLength !== undefined ? 'transition-all duration-200' : ''}>
             {getPartText(part)}
           </div>
         {/if}

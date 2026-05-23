@@ -98,12 +98,16 @@ export class ChatSession {
     });
   }
 
-  isMessageAnimating(message: GaboUIMessage) {
-    if (message.metadata?.pending) return true;
-    if (this.animatedMessageId !== message.id) return false;
-    const lastPart = message.parts.at(-1);
-    const text = lastPart?.type === "text" ? lastPart.text : "";
-    return this.animatedMessageLength < text.length;
+  isMessageAnimating(message: GaboUIMessage): boolean {
+    switch (true) {
+      case message.metadata?.pending: return true;
+      case this.animatedMessageId !== message.id: return false;
+      default: {
+        const lastPart = message.parts.at(-1);
+        const text = lastPart?.type === "text" ? lastPart.text : "";
+        return this.animatedMessageLength < text.length;
+      }
+    }
   }
 
   waitForMessageAnimation(messageId: string): Promise<void> {

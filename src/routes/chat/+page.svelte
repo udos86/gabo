@@ -6,9 +6,9 @@
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
-  
+
   const session = new ChatSession(() => data.screenplay);
-  
+
   let chatElement = $state<HTMLElement | null>(null);
 
   // Scroll to bottom when messages or typewriter length updates
@@ -23,7 +23,8 @@
 
 <ul class="grow overflow-y-auto pt-8 scroll-smooth" bind:this={chatElement}>
   {#each session.messages as message (message.id)}
-    <ChatBubble {message} isAnimating={session.isMessageAnimating(message)} animatedMessageId={session.animatedMessageId} animatedMessageLength={session.animatedMessageLength} />
+    {@const animatedLength = message.id === session.animatedMessageId ? session.animatedMessageLength : undefined}
+    <ChatBubble {message} {animatedLength} isAnimating={session.isMessageAnimating(message)} />
   {/each}
 </ul>
 
