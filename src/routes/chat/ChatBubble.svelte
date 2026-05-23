@@ -11,16 +11,42 @@
 
   let { message, isAnimating, animatedMessageId, animatedMessageLength }: Props = $props();
 
+  const isUser = $derived(message.role === 'user');
+  const isAssistant = $derived(message.role === 'assistant');
+  const hasTextContent = $derived(message.parts.some(part => part.type === 'text' && part.text.length > 0));
+  const avatarSrc = $derived(message.metadata?.agent === 'actor' ? '/waiter.png' : '/teacher.png');
+
+  const isCurrentAnimatedMessage = $derived(animatedMessageId === message.id);
+  const showBubble = $derived(isUser || (isCurrentAnimatedMessage ? animatedMessageLength > 0 : hasTextContent));
+
+  const liClass = $derived(`flex items-start gap-4 px-12 py-6 ${isUser ? 'flex-row-reverse' : ''}`);
+
+  const bubbleClass = $derived.by(() => {
+    const base = `speech-bubble max-w-[40%] animate-pop`;
+    const alignment = isUser ? 'user-bubble r' : 'assistant-bubble l';
+
+    let feedback = '';
+    if (message.metadata?.agent === 'teacher' && !isAnimating) {
+      feedback = message.metadata.passed ? 'teacher-passed' : 'teacher-failed';
+    }
+
+    return `${base} ${alignment} ${feedback}`.trim();
+  });
+
   function messageIn(node: Element, params: { role: string }) {
     return params.role === 'user' ? fade(node, { duration: 200 }) : fly(node, { x: -60, duration: 200, opacity: 0 });
   }
+
+  function getPartText(part: Extract<GaboUIMessage['parts'][number], { type: 'text' }>) {
+    return isCurrentAnimatedMessage ? part.text.slice(0, animatedMessageLength) : part.text;
+  }
 </script>
 
-<li class="flex items-start gap-4 px-12 py-6 {message.role === 'user' ? 'flex-row-reverse' : ''}" in:messageIn={{ role: message.role }} out:fade={{ duration: 200 }}>
-  {#if message.role === 'user'}
+<li class={liClass} in:messageIn={{ role: message.role }} out:fade={{ duration: 200 }}>
+  {#if isUser}
     <img width="56" height="56" src="/user.png" alt="avatar" class="rounded-full border-2 border-slate-300 shadow-sm shrink-0" />
   {/if}
-  {#if message.role === 'assistant'}
+  {#if isAssistant}
     <div class="relative shrink-0">
       {#if isAnimating}
         <!-- Outer Glow -->
@@ -28,24 +54,17 @@
         <!-- Thinking Ring -->
         <div class="absolute -inset-1 rounded-full border-2 border-transparent border-t-indigo-500/60 border-l-indigo-300/60 animate-spin-slow"></div>
       {/if}
-      <img width="56" height="56" src={message.metadata?.agent === 'actor' ? '/waiter.png' : '/teacher.png'} alt="avatar" class="relative rounded-full border-2 border-white shadow-md transition-all duration-500 ring-1 ring-slate-200" />
+      <img width="56" height="56" src={avatarSrc} alt="avatar" class="relative rounded-full border-2 border-white shadow-md transition-all duration-500 ring-1 ring-slate-200" />
     </div>
   {/if}
 
-  {#if message.role === 'user' || (animatedMessageId === message.id ? animatedMessageLength > 0 : message.parts.some((p) => p.type === 'text' && p.text.length > 0))}
-    <div
-      class="speech-bubble max-w-[40%] animate-pop
-            {message.role === 'user' ? 'user-bubble r' : 'assistant-bubble l'} 
-            {message.metadata?.agent === 'teacher' && !isAnimating ? (message.metadata.passed ? 'teacher-passed' : 'teacher-failed') : ''}">
+  {#if showBubble}
+    <div class={bubbleClass}>
       {#each message.parts as part, index (index)}
         {#if part.type === 'text'}
-          {#if animatedMessageId === message.id}
-            <div class="transition-all duration-200">
-              {part.text.slice(0, animatedMessageLength)}
-            </div>
-          {:else}
-            <div>{part.text}</div>
-          {/if}
+          <div class={isCurrentAnimatedMessage ? 'transition-all duration-200' : ''}>
+            {getPartText(part)}
+          </div>
         {/if}
       {/each}
     </div>
