@@ -29,11 +29,6 @@ export class ChatSession {
   play = $derived.by(() => new Play({ screenplay: this.#getScreenplay() }));
 
   agentStructuredObject: Experimental_StructuredObject<typeof agentOutputSchema>;
-  
-  pendingMessageId = $derived.by(() => {
-    const pendingMessage = this.messages.at(-1);
-    return pendingMessage?.metadata?.pending === true ? pendingMessage.id : null;
-  });
 
   animatedMessageId = $state<string | null>(null);
   animatedMessageLength = $state(0);
@@ -46,32 +41,35 @@ export class ChatSession {
     this.agentStructuredObject = new Experimental_StructuredObject({
       api: "/api/agent",
       schema: agentOutputSchema,
-      onFinish: async (output) => {
-        if (output.object == null) return;
+      onFinish: async ({ object }) => {
+        if (object == undefined) return;
 
         // Wait for the message to finish animating before we trigger the next turn
         if (this.#animationResolver instanceof Resolver) await this.#animationResolver;
 
         let message: GaboUIMessage | undefined;
 
-        const parts: UIMessage['parts'] = [{ type: "text", text: output.object.text }];
+        const parts: UIMessage['parts'] = [{ type: "text", text: object.text }];
 
         const metadata = (() => {
-          switch (output.object.agent) {
+          switch (object.agent) {
             case "actor":
               return { agent: "actor", position: this.play.position } as const;
             case "teacher":
-              return { agent: "teacher", position: this.play.position, passed: output.object.passed } as const;
+              return { agent: "teacher", position: this.play.position, passed: object.passed } as const;
           }
         })();
 
-        if (this.pendingMessageId === null) {
+        const pendingMessage = this.messages.findLast(message => {
+          return message.role === "assistant" && message.metadata?.pending === true && message.metadata.agent === object.agent;
+        });
+
+        if (pendingMessage === undefined) {
           const id = globalThis.crypto.randomUUID();
           message = { id, parts, role: "assistant", metadata };
           this.messages.push(message);
         } else {
-          message = this.messages.find(message => message.id === this.pendingMessageId);
-          if (message === undefined) return;
+          message = pendingMessage;
           message.parts = parts;
           message.metadata = metadata;
         }
@@ -79,7 +77,7 @@ export class ChatSession {
         this.animatedMessageId = message.id;
         this.#animationResolver = new Resolver();
 
-        if (output.object.agent === "teacher" && !output.object.passed) return;
+        if (object.agent === "teacher" && !object.passed) return;
 
         this.nextTurn();
       },
