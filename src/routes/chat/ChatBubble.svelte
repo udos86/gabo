@@ -18,7 +18,7 @@
   const isAssistant = $derived(message.role === 'assistant');
   const avatarSrc = $derived(message.metadata?.agent === 'actor' ? '/waiter.png' : '/teacher.png');
   const hasTextContent = $derived(message.parts.some((part) => part.type === 'text' && part.text.length > 0));
-  const shouldShowBubble = $derived(isUser || (animatedLength === undefined ? hasTextContent : animatedLength > 0));
+  const showBubble = $derived(isUser || (animatedLength === undefined ? hasTextContent : animatedLength > 0));
 
   const liClass = $derived(`flex items-start gap-4 px-12 py-6 ${isUser ? 'flex-row-reverse' : ''}`);
   const bubbleClass = $derived.by(() => {
@@ -44,7 +44,7 @@
   {/if}
   {#if isAssistant}
     <div class="relative shrink-0">
-      {#if isAnimating}
+      {#if isAnimating || message.metadata?.pending === true}
         <!-- Outer Glow -->
         <div class="absolute -inset-2 rounded-full bg-indigo-500/15 blur-xl animate-avatar-glow"></div>
         <!-- Thinking Ring -->
@@ -54,7 +54,7 @@
     </div>
   {/if}
 
-  {#if shouldShowBubble}
+  {#if showBubble}
     <div class={bubbleClass}>
       {#each message.parts as part, index (index)}
         {#if part.type === 'text'}

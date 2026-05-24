@@ -1,7 +1,7 @@
 export class Resolver<Type = void> {
   #promise: Promise<Type>;
-  // @ts-expect-error - assigned synchronously in the executor
-  resolve: (value: Type | PromiseLike<Type>) => void;
+
+  resolve!: (value: Type | PromiseLike<Type>) => void;
 
   constructor() {
     this.#promise = new Promise<Type>(resolve => this.resolve = resolve);

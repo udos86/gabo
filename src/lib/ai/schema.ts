@@ -32,3 +32,4 @@ export const messageMetadataSchema = z.object({
 
 export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
 export type GaboUIMessage = UIMessage<MessageMetadata>;
+export type GaboPendingUIMessage = UIMessage<MessageMetadata & { pending: true }>;
