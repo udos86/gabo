@@ -3,23 +3,7 @@ import { Experimental_StructuredObject, type UIMessage } from "@ai-sdk/svelte";
 import { convertToDialogue } from "$lib/ai/actor";
 import { agentOutputSchema, type GaboUIMessage } from "$lib/ai/schema";
 import { Play, type Screenplay } from "$lib/screenplay/screenplay";
-
-class Resolver<Type = void> {
-  #promise: Promise<Type>;
-  // @ts-expect-error - assigned synchronously in the executor
-  resolve: (value: Type | PromiseLike<Type>) => void;
-
-  constructor() {
-    this.#promise = new Promise<Type>(resolve => this.resolve = resolve);
-  }
-
-  then<FulfilledResultType = Type, RejectedResultType = never>(
-    onfulfilled?: ((value: Type) => FulfilledResultType | PromiseLike<FulfilledResultType>) | null,
-    onrejected?: ((reason: any) => RejectedResultType | PromiseLike<RejectedResultType>) | null
-  ): Promise<FulfilledResultType | RejectedResultType> {
-    return this.#promise.then(onfulfilled, onrejected);
-  }
-}
+import { Resolver } from "$lib/utils/resolver";
 
 export class ChatSession {
   #getScreenplay: () => Screenplay;
@@ -31,8 +15,8 @@ export class ChatSession {
   agentStructuredObject: Experimental_StructuredObject<typeof agentOutputSchema>;
 
   animatedMessageId = $state<string | null>(null);
-  animatedMessageLength = $state(0);
   animatedMessage = $derived(this.messages.find(message => message.id === this.animatedMessageId));
+  animatedMessageLength = $state(0);
   #animationResolver: Resolver<void> | null = null;
 
   constructor(getScreenplay: () => Screenplay) {
