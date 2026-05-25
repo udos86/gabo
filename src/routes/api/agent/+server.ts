@@ -3,15 +3,15 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { OPENAI_API_KEY, ACTOR_MODEL, TEACHER_MODEL } from '$env/static/private';
 import { runActorAgent, type ActorAgentContext } from "$lib/ai/actor.js";
 import { runTeacherAgent, type TeacherAgentContext } from "$lib/ai/teacher";
-import { Output, simulateReadableStream, streamText } from "ai";
+import { createTextStreamResponse, createUIMessageStream, createUIMessageStreamResponse, Output, simulateReadableStream, streamText } from "ai";
 import { MockLanguageModelV3 } from "ai/test";
 import { actorOutputSchema, teacherOutputSchema } from "$lib/ai/schema.js";
 
 const openai = createOpenAI({ apiKey: OPENAI_API_KEY });
 
 export async function POST({ request }: { request: Request }) {
-  const body = await request.json()
-  let result;
+  const { messageId, ...body } = await request.json();
+  let result: Awaited<ReturnType<typeof runActorAgent>> | Awaited<ReturnType<typeof runTeacherAgent>> | undefined;
   switch (body.agent) {
     case "actor": {
       /*
@@ -83,7 +83,7 @@ export async function POST({ request }: { request: Request }) {
         }),
         output: Output.object({ schema: actorOutputSchema }),
         prompt: [{ role: 'assistant', content: '' }]
-      });
+      }) as unknown as Awaited<ReturnType<typeof runActorAgent>>;
       break;
     }
     case "teacher": {
@@ -139,11 +139,13 @@ export async function POST({ request }: { request: Request }) {
         }),
         output: Output.object({ schema: teacherOutputSchema }),
         prompt: [{ role: 'assistant', content: '' }]
-      });
+      }) as unknown as Awaited<ReturnType<typeof runTeacherAgent>>;
       break;
     }
   }
 
   if (result === undefined) return new Response("Invalid agent type", { status: 400 });
+
   return result.toTextStreamResponse();
+  // return createTextStreamResponse({ textStream: result.textStream });
 }

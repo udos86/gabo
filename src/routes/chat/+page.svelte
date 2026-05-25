@@ -1,4 +1,4 @@
-<script lang='ts'>
+<script lang="ts">
   import { onMount } from 'svelte';
   import { Experimental_StructuredObject, type UIMessage } from '@ai-sdk/svelte';
 
@@ -6,7 +6,7 @@
   import { agentOutputSchema, type GaboPendingUIMessage, type GaboUIMessage } from '$lib/ai/schema';
   import { Play } from '$lib/screenplay/screenplay';
   import { Resolver } from '$lib/utils/resolver';
-  
+
   import type { PageProps } from './$types';
 
   import ChatBubble from './ChatBubble.svelte';
@@ -21,54 +21,60 @@
 
   let animatedMessageId = $state<string | null>(null);
   let animatedMessageLength = $state(0);
-  let animatedMessage = $derived(messages.find(message => message.id === animatedMessageId));
+  let animatedMessage = $derived(messages.find((message) => message.id === animatedMessageId));
   let isAnimating = $derived(animatedMessageId !== null);
   let animationResolver: Resolver<void> | null = null;
 
-    const agentStructuredObject = new Experimental_StructuredObject({
-    api: '/api/agent',
-    schema: agentOutputSchema,
-    onFinish: async ({ object }) => {
-      if (object == undefined) return;
+  let structuredObjects = new Map<string, Experimental_StructuredObject<typeof agentOutputSchema>>();
 
-      // Wait for the message to finish animating before we trigger the next turn
-      if (animationResolver instanceof Resolver) await animationResolver;
+  function createStructuredObject(messageId: string, input: any) {
+    const object = new Experimental_StructuredObject({
+      api: '/api/agent',
+      schema: agentOutputSchema,
+      onFinish: async ({ object }) => {
+        if (object == undefined) return;
 
-      let message: GaboUIMessage | undefined;
+        if (animationResolver instanceof Resolver) await animationResolver;
 
-      const parts: UIMessage['parts'] = [{ type: 'text', text: object.text }];
+        let message: GaboUIMessage | undefined;
 
-      const metadata = (() => {
-        switch (object.agent) {
-          case 'actor':
-            return { agent: 'actor', position: play.position } as const;
-          case 'teacher':
-            return { agent: 'teacher', position: play.position, passed: object.passed } as const;
+        const parts: UIMessage['parts'] = [{ type: 'text', text: object.text }];
+
+        const metadata = (() => {
+          switch (object.agent) {
+            case 'actor':
+              return { agent: 'actor', position: play.position } as const;
+            case 'teacher':
+              return { agent: 'teacher', position: play.position, passed: object.passed } as const;
+          }
+        })();
+
+        const pendingMessage = messages.find(message => message.id === messageId && message.metadata?.pending === true);
+
+        if (pendingMessage === undefined) {
+          message = { id: messageId, parts, role: 'assistant', metadata };
+          messages.push(message);
+        } else {
+          message = pendingMessage;
+          message.parts = parts;
+          message.metadata = metadata;
         }
-      })();
 
-      const pendingMessage = messages.findLast(message => {
-        return message.role === 'assistant' && message.metadata?.pending === true && message.metadata.agent === object.agent;
-      });
+        animatedMessageId = message.id;
+        animationResolver = new Resolver();
 
-      if (pendingMessage === undefined) {
-        const id = globalThis.crypto.randomUUID();
-        message = { id, parts, role: 'assistant', metadata };
-        messages.push(message);
-      } else {
-        message = pendingMessage;
-        message.parts = parts;
-        message.metadata = metadata;
-      }
+        structuredObjects.delete(messageId);
 
-      animatedMessageId = message.id;
-      animationResolver = new Resolver();
+        if (object.agent === 'teacher' && !object.passed) return;
 
-      if (object.agent === 'teacher' && !object.passed) return;
+        nextTurn();
+      },
+    });
 
-      nextTurn();
-    },
-  });
+    structuredObjects.set(messageId, object);
+
+    object.submit(input);
+  }
 
   function clearAnimation() {
     if (animationResolver instanceof Resolver) {
@@ -83,9 +89,18 @@
     const done = play.next();
     if (done) return;
     const { beat, character, position, slugline } = play;
-    
+
     if (character.actor === 'assistant') {
-      agentStructuredObject.submit({
+      const actorMessage: GaboPendingUIMessage = {
+        id: globalThis.crypto.randomUUID(),
+        parts: [{ type: 'text', text: '' }],
+        role: 'assistant',
+        metadata: { agent: 'actor', position, pending: true },
+      };
+
+      messages.push(actorMessage);
+
+      createStructuredObject(actorMessage.id, {
         agent: 'actor',
         language: 'French',
         slugline,
@@ -94,15 +109,6 @@
         interlocutors: play.others.map(({ role }) => role),
         dialogue: convertToDialogue(messages, play),
       });
-
-      const message: GaboPendingUIMessage = {
-        id: globalThis.crypto.randomUUID(),
-        parts: [{ type: 'text', text: '' }],
-        role: 'assistant',
-        metadata: { agent: 'actor', position, pending: true},
-      };
-
-      messages.push(message);
     }
   }
 
@@ -112,16 +118,23 @@
 
     if (isAnimating) clearAnimation();
 
-    // Add user message
-    messages.push({
+    const userMessage: GaboUIMessage = {
       id: globalThis.crypto.randomUUID(),
       parts: [{ type: 'text', text: chatInput }],
       role: 'user',
       metadata: { position },
-    });
+    };
 
-    // Request teacher (LLM judge) to evaluate user input
-    agentStructuredObject.submit({
+    const teacherMessage: GaboPendingUIMessage = {
+      id: globalThis.crypto.randomUUID(),
+      parts: [{ type: 'text', text: '' }],
+      role: 'assistant',
+      metadata: { agent: 'teacher', position, pending: true },
+    };
+
+    messages.push(userMessage, teacherMessage);
+
+    createStructuredObject(teacherMessage.id, {
       agent: 'teacher',
       language: 'French',
       input: chatInput,
@@ -130,14 +143,6 @@
       actions: beat.actions,
       interlocutors: play.others.map(({ role }) => role),
       dialogue: convertToDialogue(messages, play),
-    });
-
-    // Add pending teacher agent message
-    messages.push({
-      id: globalThis.crypto.randomUUID(),
-      parts: [{ type: 'text', text: '' }],
-      role: 'assistant',
-      metadata: { agent: 'teacher', position, pending: true },
     });
 
     chatInput = '';
@@ -174,4 +179,4 @@
   {/each}
 </ul>
 
-<ChatInput bind:value={chatInput} onSubmit={event => onSubmit(event)} />
+<ChatInput bind:value={chatInput} onSubmit={(event) => onSubmit(event)} />
