@@ -20,11 +20,12 @@
   let play = $derived.by(() => new Play({ screenplay: data.screenplay }));
 
   let animatedMessageId = $state<string | null>(null);
-  let animatedMessage = $derived(messages.find(message => message.id === animatedMessageId));
   let animatedMessageLength = $state(0);
+  let animatedMessage = $derived(messages.find(message => message.id === animatedMessageId));
+  let isAnimating = $derived(animatedMessageId !== null);
   let animationResolver: Resolver<void> | null = null;
 
-  const agentStructuredObject = new Experimental_StructuredObject({
+    const agentStructuredObject = new Experimental_StructuredObject({
     api: '/api/agent',
     schema: agentOutputSchema,
     onFinish: async ({ object }) => {
@@ -69,11 +70,20 @@
     },
   });
 
+  function clearAnimation() {
+    if (animationResolver instanceof Resolver) {
+      animationResolver.resolve();
+      animationResolver = null;
+    }
+    animatedMessageId = null;
+    animatedMessageLength = 0;
+  }
+
   function nextTurn() {
     const done = play.next();
     if (done) return;
     const { beat, character, position, slugline } = play;
-
+    
     if (character.actor === 'assistant') {
       agentStructuredObject.submit({
         agent: 'actor',
@@ -99,6 +109,8 @@
   function onSubmit(event: Event) {
     event.preventDefault();
     const { slugline, character, beat, position } = play;
+
+    if (isAnimating) clearAnimation();
 
     // Add user message
     messages.push({
@@ -142,13 +154,7 @@
       return () => globalThis.clearTimeout(timeout);
     }
 
-    if (animationResolver instanceof Resolver) {
-      animationResolver.resolve();
-      animationResolver = null;
-    }
-
-    animatedMessageId = null;
-    animatedMessageLength = 0;
+    clearAnimation();
   });
 
   $effect(() => {

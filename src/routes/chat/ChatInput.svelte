@@ -1,10 +1,11 @@
 <script lang="ts">
   interface Props {
+    disabled?: boolean;
     value: string;
     onSubmit: (event: Event) => void;
   }
 
-  let { value = $bindable(), onSubmit }: Props = $props();
+  let { value = $bindable(), disabled, onSubmit }: Props = $props();
 </script>
 
 <footer class="pb-7 pt-5 flex-initial border-t border-gray-300 shadow-lg">
@@ -17,6 +18,7 @@
       id="chatMessage"
       placeholder="Send a message"
       class="h-12 grow max-w-lg border-2 focus:ring-0 focus:outline-none focus:border-petrol-500 rounded"
+      disabled={disabled}
       required
     />
     <input type="submit" hidden />
