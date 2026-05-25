@@ -3,7 +3,7 @@
   import { Experimental_StructuredObject, type UIMessage } from '@ai-sdk/svelte';
 
   import { convertToDialogue } from '$lib/ai/actor';
-  import { agentOutputSchema, type GaboPendingUIMessage, type GaboUIMessage } from '$lib/ai/schema';
+  import { agentOutputSchema, type GaboUIMessage } from '$lib/ai/schema';
   import { Play } from '$lib/screenplay/screenplay';
   import { Resolver } from '$lib/utils/resolver';
 
@@ -43,13 +43,13 @@
         const metadata = (() => {
           switch (object.agent) {
             case 'actor':
-              return { agent: 'actor', position: play.position } as const;
+              return { agent: 'actor', position: play.position, status: 'ready' } as const;
             case 'teacher':
-              return { agent: 'teacher', position: play.position, passed: object.passed } as const;
+              return { agent: 'teacher', position: play.position, passed: object.passed, status: 'ready' } as const;
           }
         })();
 
-        const pendingMessage = messages.find(message => message.id === messageId && message.metadata?.pending === true);
+        const pendingMessage = messages.find(message => message.id === messageId && message.metadata?.status === 'pending');
 
         if (pendingMessage === undefined) {
           message = { id: messageId, parts, role: 'assistant', metadata };
@@ -91,11 +91,11 @@
     const { beat, character, position, slugline } = play;
 
     if (character.actor === 'assistant') {
-      const actorMessage: GaboPendingUIMessage = {
+      const actorMessage: GaboUIMessage = {
         id: globalThis.crypto.randomUUID(),
         parts: [{ type: 'text', text: '' }],
         role: 'assistant',
-        metadata: { agent: 'actor', position, pending: true },
+        metadata: { agent: 'actor', position, status: 'pending' },
       };
 
       messages.push(actorMessage);
@@ -122,14 +122,14 @@
       id: globalThis.crypto.randomUUID(),
       parts: [{ type: 'text', text: chatInput }],
       role: 'user',
-      metadata: { position },
+      metadata: { position, status: 'done' },
     };
 
-    const teacherMessage: GaboPendingUIMessage = {
+    const teacherMessage: GaboUIMessage = {
       id: globalThis.crypto.randomUUID(),
       parts: [{ type: 'text', text: '' }],
       role: 'assistant',
-      metadata: { agent: 'teacher', position, pending: true },
+      metadata: { agent: 'teacher', position, status: 'pending' },
     };
 
     messages.push(userMessage, teacherMessage);

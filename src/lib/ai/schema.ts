@@ -1,22 +1,22 @@
-import type { UIMessage } from "ai";
-import { z } from "zod";
+import type { UIMessage } from 'ai';
+import { z } from 'zod';
 
 export const actorOutputSchema = z.object({
-  agent: z.literal("actor"),
+  agent: z.literal('actor'),
   text: z.string()
 });
 
 export type ActorOutput = z.infer<typeof actorOutputSchema>;
 
 export const teacherOutputSchema = z.object({
-  agent: z.literal("teacher"),
+  agent: z.literal('teacher'),
   text: z.string(),
   passed: z.boolean(),
 });
 
 export type TeacherOutput = z.infer<typeof teacherOutputSchema>;
 
-export const agentOutputSchema = z.discriminatedUnion("agent", [
+export const agentOutputSchema = z.discriminatedUnion('agent', [
   actorOutputSchema,
   teacherOutputSchema
 ]);
@@ -24,12 +24,11 @@ export const agentOutputSchema = z.discriminatedUnion("agent", [
 export type AgentOutput = z.infer<typeof agentOutputSchema>;
 
 export const messageMetadataSchema = z.object({
-  agent: z.enum(["actor", "teacher"]).optional(),
-  pending: z.boolean().optional(),
+  agent: z.enum(['actor', 'teacher']).optional(),
   passed: z.boolean().optional(),
-  position: z.tuple([z.number(), z.number()])
+  position: z.tuple([z.number(), z.number()]),
+  status: z.enum(['pending', 'ready', 'animating', 'done'])
 });
 
 export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
 export type GaboUIMessage = UIMessage<MessageMetadata>;
-export type GaboPendingUIMessage = UIMessage<MessageMetadata & { pending: true }>;

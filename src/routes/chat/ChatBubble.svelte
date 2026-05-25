@@ -44,7 +44,7 @@
   {/if}
   {#if isAssistant}
     <div class="relative shrink-0">
-      {#if isAnimating || message.metadata?.pending === true}
+      {#if isAnimating || message.metadata?.status === 'pending'}
         <!-- Outer Glow -->
         <div class="absolute -inset-2 rounded-full bg-indigo-500/15 blur-xl animate-avatar-glow"></div>
         <!-- Thinking Ring -->
