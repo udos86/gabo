@@ -4,11 +4,10 @@
 
   interface Props {
     message: GaboUIMessage;
-    isAnimating?: boolean;
     animatedLength?: number;
   }
 
-  let { message, isAnimating = false, animatedLength }: Props = $props();
+  let { message, animatedLength }: Props = $props();
 
   function messageIn(node: Element, params: { role: string }) {
     return params.role === 'user' ? fade(node, { duration: 200 }) : fly(node, { x: -60, duration: 200, opacity: 0 });
@@ -17,8 +16,6 @@
   const isUser = $derived(message.role === 'user');
   const isAssistant = $derived(message.role === 'assistant');
   const avatarSrc = $derived(message.metadata?.agent === 'actor' ? '/waiter.png' : '/teacher.png');
-  const hasTextContent = $derived(message.parts.some((part) => part.type === 'text' && part.text.length > 0));
-  const showBubble = $derived(isUser || (animatedLength === undefined ? hasTextContent : animatedLength > 0));
 
   const liClass = $derived(`flex items-start gap-4 px-12 py-6 ${isUser ? 'flex-row-reverse' : ''}`);
   const bubbleClass = $derived.by(() => {
@@ -26,7 +23,7 @@
     const alignment = isUser ? 'user-bubble r' : 'assistant-bubble l';
 
     let feedback = '';
-    if (message.metadata?.agent === 'teacher' && !isAnimating) {
+    if (message.metadata?.agent === 'teacher' && message.metadata.status === 'done') {
       feedback = message.metadata.passed ? 'teacher-passed' : 'teacher-failed';
     }
 
@@ -44,7 +41,7 @@
   {/if}
   {#if isAssistant}
     <div class="relative shrink-0">
-      {#if isAnimating || message.metadata?.status === 'pending'}
+      {#if message.metadata?.status !== 'done'}
         <!-- Outer Glow -->
         <div class="absolute -inset-2 rounded-full bg-indigo-500/15 blur-xl animate-avatar-glow"></div>
         <!-- Thinking Ring -->
@@ -54,7 +51,7 @@
     </div>
   {/if}
 
-  {#if showBubble}
+  {#if message.metadata?.status === 'animating' || message.metadata?.status === 'done' }
     <div class={bubbleClass}>
       {#each message.parts as part, index (index)}
         {#if part.type === 'text'}

@@ -23,6 +23,7 @@
   let animatedMessageLength = $state(0);
   let animatedMessage = $derived(messages.find((message) => message.id === animatedMessageId));
   let isAnimating = $derived(animatedMessageId !== null);
+  //let isAnimating = $derived(messages.some(message => message.metadata?.status === 'animating'))
   let animationResolver: Resolver<void> | null = null;
 
   let structuredObjects = new Map<string, Experimental_StructuredObject<typeof agentOutputSchema>>();
@@ -60,8 +61,10 @@
           message.metadata = metadata;
         }
 
-        animatedMessageId = message.id;
-        animationResolver = new Resolver();
+        // animatedMessageId = message.id;
+        // animationResolver = new Resolver();
+
+        scheduleAnimation();
 
         structuredObjects.delete(messageId);
 
@@ -74,6 +77,24 @@
     structuredObjects.set(messageId, object);
 
     object.submit(input);
+  }
+
+  function scheduleAnimation() {
+    if (isAnimating) return;
+    const nextAnimatedMessage = messages.find(message => message.metadata?.status === 'ready');
+    if (nextAnimatedMessage === undefined) return;
+    startAnimation(nextAnimatedMessage);
+  }
+
+  function startAnimation(message: GaboUIMessage) {
+    message.metadata!.status = 'animating';
+    animatedMessageId = message.id;
+    animatedMessageLength = 0;
+    animationResolver = new Resolver();
+    animationResolver?.then(() => {
+      message.metadata!.status = 'done';
+      scheduleAnimation();
+    });
   }
 
   function clearAnimation() {
@@ -116,7 +137,7 @@
     event.preventDefault();
     const { slugline, character, beat, position } = play;
 
-    if (isAnimating) clearAnimation();
+    // if (isAnimating) clearAnimation();
 
     const userMessage: GaboUIMessage = {
       id: globalThis.crypto.randomUUID(),
@@ -163,7 +184,7 @@
   });
 
   $effect(() => {
-    messages;
+    messages.length;
     animatedMessageLength;
     chatElement?.scroll({ behavior: 'smooth', top: chatElement.scrollHeight });
   });
@@ -172,10 +193,10 @@
 </script>
 
 <ul class="grow overflow-y-auto pt-8 scroll-smooth" bind:this={chatElement}>
-  {#each messages as message (message.id)}
-    {@const isAnimating = message.id === animatedMessageId}
-    {@const animatedLength = isAnimating ? animatedMessageLength : undefined}
-    <ChatBubble {message} {isAnimating} {animatedLength} />
+  {#each messages as message, index (message.id)}
+    {@const animatedLength = message.id === animatedMessageId ? animatedMessageLength : undefined}
+    <span class="text-xs text-slate-400 font-mono">{index}</span>
+    <ChatBubble {message} {animatedLength} />
   {/each}
 </ul>
 
