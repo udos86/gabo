@@ -50,7 +50,7 @@
           }
         })();
 
-        const pendingMessage = messages.find(message => message.id === messageId && message.metadata?.status === 'pending');
+        const pendingMessage = messages.find((message) => message.id === messageId && message.metadata?.status === 'pending');
 
         if (pendingMessage === undefined) {
           message = { id: messageId, parts, role: 'assistant', metadata };
@@ -61,10 +61,7 @@
           message.metadata = metadata;
         }
 
-        // animatedMessageId = message.id;
-        // animationResolver = new Resolver();
-
-        scheduleAnimation();
+        scheduleNextMessageAnimation();
 
         structuredObjects.delete(messageId);
 
@@ -79,21 +76,18 @@
     object.submit(input);
   }
 
-  function scheduleAnimation() {
+  function scheduleNextMessageAnimation() {
     if (isAnimating) return;
-    const nextAnimatedMessage = messages.find(message => message.metadata?.status === 'ready');
+    const nextAnimatedMessage = messages.find((message) => message.metadata?.status === 'ready');
     if (nextAnimatedMessage === undefined) return;
-    startAnimation(nextAnimatedMessage);
-  }
 
-  function startAnimation(message: GaboUIMessage) {
-    message.metadata!.status = 'animating';
-    animatedMessageId = message.id;
+    nextAnimatedMessage.metadata!.status = 'animating';
+    animatedMessageId = nextAnimatedMessage.id;
     animatedMessageLength = 0;
     animationResolver = new Resolver();
     animationResolver?.then(() => {
-      message.metadata!.status = 'done';
-      scheduleAnimation();
+      nextAnimatedMessage.metadata!.status = 'done';
+      scheduleNextMessageAnimation();
     });
   }
 
