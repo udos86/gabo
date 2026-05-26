@@ -17,15 +17,13 @@
   let messages = $state<Array<GaboUIMessage>>([]);
   let chatInput = $state('');
   let chatElement = $state<HTMLElement | null>(null);
-  let play = $derived.by(() => new Play({ screenplay: data.screenplay }));
+  let play = $derived(new Play({ screenplay: data.screenplay }));
 
-  let animatedMessageId = $state<string | null>(null);
+  let animatedMessage = $derived(messages.find((message) => message.metadata?.status === 'animating'));
   let animatedMessageLength = $state(0);
-  let animatedMessage = $derived(messages.find((message) => message.id === animatedMessageId));
-  let isAnimating = $derived(animatedMessageId !== null);
-  //let isAnimating = $derived(messages.some(message => message.metadata?.status === 'animating'))
-  let animationResolver: Resolver<void> | null = null;
+  let isAnimating = $derived(animatedMessage !== undefined);
 
+  let animationResolver: Resolver<void> | null = null;
   let structuredObjects = new Map<string, Experimental_StructuredObject<typeof agentOutputSchema>>();
 
   function createStructuredObject(messageId: string, input: any) {
@@ -35,9 +33,7 @@
       onFinish: async ({ object }) => {
         if (object == undefined) return;
 
-        if (animationResolver instanceof Resolver) await animationResolver;
-
-        let message: GaboUIMessage | undefined;
+        await animationResolver;
 
         const parts: UIMessage['parts'] = [{ type: 'text', text: object.text }];
 
@@ -50,15 +46,14 @@
           }
         })();
 
-        const pendingMessage = messages.find((message) => message.id === messageId && message.metadata?.status === 'pending');
+        const pendingMessage = messages.find(({ id, metadata }) => id === messageId && metadata?.status === 'pending');
 
         if (pendingMessage === undefined) {
-          message = { id: messageId, parts, role: 'assistant', metadata };
+          const message: GaboUIMessage = { id: messageId, parts, role: 'assistant', metadata };
           messages.push(message);
         } else {
-          message = pendingMessage;
-          message.parts = parts;
-          message.metadata = metadata;
+          pendingMessage.parts = parts;
+          pendingMessage.metadata = metadata;
         }
 
         scheduleNextMessageAnimation();
@@ -76,27 +71,23 @@
     object.submit(input);
   }
 
-  function scheduleNextMessageAnimation() {
+  async function scheduleNextMessageAnimation() {
     if (isAnimating) return;
-    const nextAnimatedMessage = messages.find((message) => message.metadata?.status === 'ready');
+    const nextAnimatedMessage = messages.find(({ metadata }) => metadata?.status === 'ready');
     if (nextAnimatedMessage === undefined) return;
 
     nextAnimatedMessage.metadata!.status = 'animating';
-    animatedMessageId = nextAnimatedMessage.id;
     animatedMessageLength = 0;
     animationResolver = new Resolver();
-    animationResolver?.then(() => {
-      nextAnimatedMessage.metadata!.status = 'done';
-      scheduleNextMessageAnimation();
-    });
+
+    await animationResolver;
+    nextAnimatedMessage.metadata!.status = 'done';
+    scheduleNextMessageAnimation();
   }
 
   function clearAnimation() {
-    if (animationResolver instanceof Resolver) {
-      animationResolver.resolve();
-      animationResolver = null;
-    }
-    animatedMessageId = null;
+    animationResolver?.resolve();
+    animationResolver = null;
     animatedMessageLength = 0;
   }
 
@@ -129,9 +120,9 @@
 
   function onSubmit(event: Event) {
     event.preventDefault();
-    const { slugline, character, beat, position } = play;
+    clearAnimation();
 
-    // if (isAnimating) clearAnimation();
+    const { slugline, character, beat, position } = play;
 
     const userMessage: GaboUIMessage = {
       id: globalThis.crypto.randomUUID(),
@@ -188,8 +179,7 @@
 
 <ul class="grow overflow-y-auto pt-8 scroll-smooth" bind:this={chatElement}>
   {#each messages as message, index (message.id)}
-    {@const animatedLength = message.id === animatedMessageId ? animatedMessageLength : undefined}
-    <span class="text-xs text-slate-400 font-mono">{index}</span>
+    {@const animatedLength = message === animatedMessage ? animatedMessageLength : undefined}
     <ChatBubble {message} {animatedLength} />
   {/each}
 </ul>
