@@ -1,9 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { SvelteMap } from 'svelte/reactivity';
   import { Experimental_StructuredObject, type UIMessage } from '@ai-sdk/svelte';
 
   import { convertToDialogue } from '$lib/ai/actor';
-  import { agentOutputSchema, type GaboUIMessage } from '$lib/ai/schema';
+  import { agentOutputSchema, type AgentInput, type AgentName, type GaboUIMessage } from '$lib/ai/schema';
   import { Play } from '$lib/screenplay/screenplay';
   import { Resolver } from '$lib/utils/resolver';
 
@@ -24,11 +25,11 @@
   let isAnimating = $derived(animatedMessage !== undefined);
 
   let animationResolver: Resolver<void> | null = null;
-  let structuredObjects = new Map<string, Experimental_StructuredObject<typeof agentOutputSchema>>();
+  let structuredObjects = new SvelteMap<string, Experimental_StructuredObject<typeof agentOutputSchema>>();
 
-  function createStructuredObject(messageId: string, input: any) {
+  function createStructuredObject(messageId: string, agent: AgentName, input: AgentInput) {
     const object = new Experimental_StructuredObject({
-      api: '/api/agent',
+      api: `/api/agent/${agent}`,
       schema: agentOutputSchema,
       onFinish: async ({ object }) => {
         if (object == undefined) return;
@@ -106,8 +107,7 @@
 
       messages.push(actorMessage);
 
-      createStructuredObject(actorMessage.id, {
-        agent: 'actor',
+      createStructuredObject(actorMessage.id, 'actor', {
         language: 'French',
         slugline,
         role: character.role,
@@ -140,8 +140,7 @@
 
     messages.push(userMessage, teacherMessage);
 
-    createStructuredObject(teacherMessage.id, {
-      agent: 'teacher',
+    createStructuredObject(teacherMessage.id, 'teacher', {
       language: 'French',
       input: chatInput,
       slugline,
@@ -169,7 +168,9 @@
   });
 
   $effect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     messages.length;
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     animatedMessageLength;
     chatElement?.scroll({ behavior: 'smooth', top: chatElement.scrollHeight });
   });
@@ -178,7 +179,7 @@
 </script>
 
 <ul class="grow overflow-y-auto pt-8 scroll-smooth" bind:this={chatElement}>
-  {#each messages as message, index (message.id)}
+  {#each messages as message (message.id)}
     {@const animatedLength = message === animatedMessage ? animatedMessageLength : undefined}
     <ChatBubble {message} {animatedLength} />
   {/each}

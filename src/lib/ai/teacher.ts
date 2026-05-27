@@ -1,18 +1,6 @@
-import { Output, streamText, type LanguageModel } from "ai";
+import { Output, streamText } from "ai";
 
-import type { Beat, CharacterRole } from "$lib/screenplay/screenplay";
-import { teacherOutputSchema } from "./schema";
-
-export interface TeacherAgentContext {
-  actions: Beat['actions'];
-  dialogue: string;
-  input: string;
-  interlocutors: CharacterRole[];
-  language: string;
-  model: LanguageModel;
-  role: CharacterRole;
-  slugline: string;
-}
+import { teacherOutputSchema, type TeacherAgentContext } from "$lib/ai/schema";
 
 export async function runTeacherAgent({ actions, dialogue, input, interlocutors, language, model, role, slugline }: TeacherAgentContext) {
   return streamText({
