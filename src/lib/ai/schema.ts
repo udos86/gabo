@@ -69,7 +69,7 @@ export const actorMessageMetadataSchema = messageMetadataSchema.extend({
 
 export const teacherMessageMetadataSchema = messageMetadataSchema.extend({
   agent: z.literal('teacher'),
-  passed: z.boolean()
+  passed: z.boolean().optional()
 });
 
 export type AgentName = 'actor' | 'teacher';
