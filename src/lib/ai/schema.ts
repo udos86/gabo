@@ -63,6 +63,10 @@ export const messageMetadataSchema = z.object({
   status: z.enum(['pending', 'ready', 'animating', 'done'])
 });
 
+export const assistantMessageMetadataSchema = messageMetadataSchema.extend({
+  agent: z.enum(['actor', 'teacher'])
+});
+
 export const actorMessageMetadataSchema = messageMetadataSchema.extend({
   agent: z.literal('actor')
 });
@@ -75,6 +79,19 @@ export const teacherMessageMetadataSchema = messageMetadataSchema.extend({
 export type AgentName = 'actor' | 'teacher';
 export type AgentInput = ActorAgentInput | TeacherAgentInput;
 
+export type UserMessageMetadata = z.infer<typeof messageMetadataSchema>;
+export type AssistantMessageMetadata = z.infer<typeof actorMessageMetadataSchema> | z.infer<typeof teacherMessageMetadataSchema>;
 
-export type MessageMetadata = z.infer<typeof messageMetadataSchema | typeof actorMessageMetadataSchema | typeof teacherMessageMetadataSchema>;
-export type GaboUIMessage = UIMessage<MessageMetadata>;
+export type MessageMetadata = UserMessageMetadata | AssistantMessageMetadata;
+
+export type UserUIMessage = UIMessage<MessageMetadata> & {
+  role: 'user';
+  metadata: UserMessageMetadata
+};
+
+export type AssistantUIMessage = UIMessage<MessageMetadata> & {
+  role: 'assistant';
+  metadata: AssistantMessageMetadata
+};
+
+export type GaboUIMessage = UserUIMessage | AssistantUIMessage;

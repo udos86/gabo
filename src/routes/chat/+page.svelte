@@ -4,7 +4,7 @@
   import { Experimental_StructuredObject, type UIMessage } from '@ai-sdk/svelte';
 
   import { convertToDialogue } from '$lib/ai/actor';
-  import { agentOutputSchema, type AgentInput, type AgentName, type GaboUIMessage } from '$lib/ai/schema';
+  import { agentOutputSchema, type AgentInput, type AgentName, type AssistantMessageMetadata, type GaboUIMessage } from '$lib/ai/schema';
   import { Play } from '$lib/screenplay/screenplay';
   import { Resolver } from '$lib/utils/resolver';
 
@@ -38,14 +38,12 @@
 
         const parts: UIMessage['parts'] = [{ type: 'text', text: object.text }];
 
-        const metadata = (() => {
-          switch (object.agent) {
-            case 'actor':
-              return { agent: 'actor', position: play.position, status: 'ready' } as const;
-            case 'teacher':
-              return { agent: 'teacher', position: play.position, passed: object.passed, status: 'ready' } as const;
-          }
-        })();
+        const metadata: AssistantMessageMetadata = {
+          agent: object.agent,
+          position: play.position,
+          status: 'ready',
+          ...(object.agent === 'teacher' && { passed: object.passed }),
+        };
 
         const pendingMessage = messages.find(({ id, metadata }) => id === messageId && metadata?.status === 'pending');
 
@@ -168,10 +166,8 @@
   });
 
   $effect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    messages.length;
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    animatedMessageLength;
+    void messages.length;
+    void animatedMessageLength;
     chatElement?.scroll({ behavior: 'smooth', top: chatElement.scrollHeight });
   });
 
@@ -180,7 +176,8 @@
 
 <ul class="grow overflow-y-auto pt-8 scroll-smooth" bind:this={chatElement}>
   {#each messages as message (message.id)}
-    {@const animatedLength = message === animatedMessage ? animatedMessageLength : undefined}
+    {@const isAnimatedMessage = message === animatedMessage}
+    {@const animatedLength = isAnimatedMessage ? animatedMessageLength : undefined}
     <ChatBubble {message} {animatedLength} />
   {/each}
 </ul>

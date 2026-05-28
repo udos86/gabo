@@ -15,7 +15,7 @@
 
   const isUser = $derived(message.role === 'user');
   const isAssistant = $derived(message.role === 'assistant');
-  const avatarSrc = $derived(message.metadata?.agent === 'actor' ? '/waiter.png' : '/teacher.png');
+  const avatarSrc = $derived(message.role === 'assistant' && message.metadata.agent === 'actor' ? '/waiter.png' : '/teacher.png');
 
   const liClass = $derived(`flex items-start gap-4 px-12 py-6 ${isUser ? 'flex-row-reverse' : ''}`);
   const bubbleClass = $derived.by(() => {
@@ -23,7 +23,7 @@
     const alignment = isUser ? 'user-bubble r' : 'assistant-bubble l';
 
     let feedback = '';
-    if (message.metadata?.agent === 'teacher' && message.metadata.status === 'done') {
+    if (message.role === 'assistant' && message.metadata.agent === 'teacher' && message.metadata.status === 'done') {
       feedback = message.metadata.passed ? 'teacher-passed' : 'teacher-failed';
     }
 
@@ -51,7 +51,7 @@
     </div>
   {/if}
 
-  {#if message.metadata?.status === 'animating' || message.metadata?.status === 'done' }
+  {#if message.metadata?.status === 'animating' || message.metadata?.status === 'done'}
     <div class={bubbleClass}>
       {#each message.parts as part, index (index)}
         {#if part.type === 'text'}
