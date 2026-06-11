@@ -1,6 +1,6 @@
 <script lang="ts">
   import { fade, fly } from 'svelte/transition';
-  import type { GaboUIMessage } from '$lib/ai/schema';
+  import type { GaboUIMessage, UserMessageMetadata } from '$lib/ai/schema';
 
   interface Props {
     message: GaboUIMessage;
@@ -13,7 +13,10 @@
     return params.role === 'user' ? fade(node, { duration: 200 }) : fly(node, { x: -60, duration: 200, opacity: 0 });
   }
 
+  let showTooltip = $state(false);
+
   const isUser = $derived(message.role === 'user');
+  const userMeta = $derived(message.role === 'user' ? message.metadata as UserMessageMetadata : undefined);
   const isAssistant = $derived(message.role === 'assistant');
   const avatarSrc = $derived(message.role === 'assistant' && message.metadata.agent === 'actor' ? '/waiter.png' : '/teacher.png');
 
@@ -23,8 +26,8 @@
     const alignment = isUser ? 'user-bubble r' : 'assistant-bubble l';
 
     let feedback = '';
-    if (message.role === 'assistant' && message.metadata.agent === 'teacher' && message.metadata.status === 'done') {
-      feedback = message.metadata.passed ? 'teacher-passed' : 'teacher-failed';
+    if (isUser && userMeta && userMeta.status === 'done') {
+      feedback = userMeta.passed ? 'teacher-passed' : 'teacher-failed';
     }
 
     return `${base} ${alignment} ${feedback}`.trim();
@@ -36,8 +39,40 @@
 </script>
 
 <li class={liClass} in:messageIn={{ role: message.role }} out:fade={{ duration: 200 }}>
-  {#if isUser}
-    <img width="56" height="56" src="/user.png" alt="avatar" class="rounded-full border-2 border-slate-300 shadow-sm shrink-0" />
+  {#if isUser && userMeta}
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+    <div 
+      class="relative shrink-0 cursor-pointer"
+      onmouseenter={() => showTooltip = true}
+      onmouseleave={() => showTooltip = false}
+      onclick={() => showTooltip = !showTooltip}
+      role="button"
+      tabindex="0"
+    >
+      {#if userMeta.status === 'pending' || userMeta.status === 'ready'}
+        <!-- Outer Glow -->
+        <div class="absolute -inset-2 rounded-full bg-indigo-500/15 blur-xl animate-avatar-glow"></div>
+        <!-- Thinking Ring -->
+        <div class="absolute -inset-1 rounded-full border-2 border-transparent border-t-indigo-500/60 border-l-indigo-300/60 animate-spin-slow z-10"></div>
+      {/if}
+
+      <div class="relative">
+        <img width="56" height="56" src="/user.png" alt="avatar" class="relative rounded-full border-2 border-slate-300 shadow-sm transition-all duration-500 ring-1 ring-slate-200" />
+
+        {#if userMeta.status === 'done'}
+          <div class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-sm text-white {userMeta.passed ? 'bg-green-500 ring-2 ring-white' : 'bg-red-500 ring-2 ring-white'} z-20 shadow-sm">
+            {userMeta.passed ? '✓' : '✗'}
+          </div>
+        {/if}
+      </div>
+
+      {#if showTooltip && userMeta.status === 'done' && userMeta.feedbackText}
+        <div class="absolute right-full top-0 mr-4 w-64 p-3 bg-slate-800 text-white text-sm rounded-lg shadow-lg z-30 break-words pointer-events-none">
+          {userMeta.feedbackText}
+        </div>
+      {/if}
+    </div>
   {/if}
   {#if isAssistant}
     <div class="relative shrink-0">
@@ -51,12 +86,12 @@
     </div>
   {/if}
 
-  {#if message.metadata?.status === 'animating' || message.metadata?.status === 'done'}
+  {#if (isAssistant && (message.metadata?.status === 'animating' || message.metadata?.status === 'done')) || isUser}
     <div class={bubbleClass}>
       {#each message.parts as part, index (index)}
         {#if part.type === 'text'}
-          <div class={animatedLength !== undefined ? 'transition-all duration-200' : ''}>
-            {getPartText(part)}
+          <div class={animatedLength !== undefined && isAssistant ? 'transition-all duration-200' : ''}>
+            {isUser ? part.text : getPartText(part)}
           </div>
         {/if}
       {/each}

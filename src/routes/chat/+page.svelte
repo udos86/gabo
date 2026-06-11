@@ -36,13 +36,24 @@
 
         await animationResolver;
 
+        if (object.agent === 'teacher') {
+          const userMessage = messages.find(({ id }) => id === messageId);
+          if (userMessage && userMessage.role === 'user') {
+            userMessage.metadata.status = 'done';
+            userMessage.metadata.feedbackText = object.text;
+            userMessage.metadata.passed = object.passed;
+          }
+          structuredObjects.delete(messageId);
+          if (object.passed) nextTurn();
+          return;
+        }
+
         const parts: UIMessage['parts'] = [{ type: 'text', text: object.text }];
 
         const metadata: AssistantMessageMetadata = {
           agent: object.agent,
           position: play.position,
           status: 'ready',
-          ...(object.agent === 'teacher' && { passed: object.passed }),
         };
 
         const pendingMessage = messages.find(({ id, metadata }) => id === messageId && metadata?.status === 'pending');
@@ -58,8 +69,6 @@
         scheduleNextMessageAnimation();
 
         structuredObjects.delete(messageId);
-
-        if (object.agent === 'teacher' && !object.passed) return;
 
         nextTurn();
       },
@@ -126,19 +135,12 @@
       id: globalThis.crypto.randomUUID(),
       parts: [{ type: 'text', text: chatInput }],
       role: 'user',
-      metadata: { position, status: 'done' },
+      metadata: { position, status: 'pending' },
     };
 
-    const teacherMessage: GaboUIMessage = {
-      id: globalThis.crypto.randomUUID(),
-      parts: [{ type: 'text', text: '' }],
-      role: 'assistant',
-      metadata: { agent: 'teacher', position, status: 'pending' },
-    };
+    messages.push(userMessage);
 
-    messages.push(userMessage, teacherMessage);
-
-    createStructuredObject(teacherMessage.id, 'teacher', {
+    createStructuredObject(userMessage.id, 'teacher', {
       language: 'French',
       input: chatInput,
       slugline,
@@ -154,8 +156,13 @@
   $effect(() => {
     if (animatedMessage === undefined) return;
 
-    const lastPart = animatedMessage.parts.at(-1);
-    const text = lastPart?.type === 'text' ? lastPart.text : '';
+    let text = '';
+    if (animatedMessage.role === 'user') {
+      text = animatedMessage.metadata.feedbackText ?? '';
+    } else {
+      const lastPart = animatedMessage.parts.at(-1);
+      text = lastPart?.type === 'text' ? lastPart.text : '';
+    }
 
     if (animatedMessageLength < text.length) {
       const timeout = globalThis.setTimeout(() => animatedMessageLength++, 30);

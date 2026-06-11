@@ -63,24 +63,20 @@ export const messageMetadataSchema = z.object({
   status: z.enum(['pending', 'ready', 'animating', 'done'])
 });
 
-export const assistantMessageMetadataSchema = messageMetadataSchema.extend({
-  agent: z.enum(['actor', 'teacher'])
+export const userMessageMetadataSchema = messageMetadataSchema.extend({
+  feedbackText: z.string().optional(),
+  passed: z.boolean().optional()
 });
 
 export const actorMessageMetadataSchema = messageMetadataSchema.extend({
   agent: z.literal('actor')
 });
 
-export const teacherMessageMetadataSchema = messageMetadataSchema.extend({
-  agent: z.literal('teacher'),
-  passed: z.boolean().optional()
-});
-
 export type AgentName = 'actor' | 'teacher';
 export type AgentInput = ActorAgentInput | TeacherAgentInput;
 
-export type UserMessageMetadata = z.infer<typeof messageMetadataSchema>;
-export type AssistantMessageMetadata = z.infer<typeof actorMessageMetadataSchema> | z.infer<typeof teacherMessageMetadataSchema>;
+export type UserMessageMetadata = z.infer<typeof userMessageMetadataSchema>;
+export type AssistantMessageMetadata = z.infer<typeof actorMessageMetadataSchema>;
 
 export type MessageMetadata = UserMessageMetadata | AssistantMessageMetadata;
 

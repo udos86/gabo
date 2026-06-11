@@ -21,7 +21,7 @@ export async function POST({ request }) {
 
   let result;
 
-  if (message.metadata.agent === 'actor') {
+  if ('agent' in message.metadata && message.metadata.agent === 'actor') {
     result = await runActorAgent({
       model,
       language,
@@ -30,18 +30,6 @@ export async function POST({ request }) {
       actions,
       dialogue: "",
       interlocutors: []
-    });
-
-  } else if (message.metadata.agent === 'teacher') {
-    result = await runTeacherAgent({
-      model,
-      language,
-      slugline,
-      actions,
-      dialogue: "",
-      input: message.parts.map(part => part.type === 'text' ? part.text : '').join(' '),
-      interlocutors: [],
-      role: "" as any
     });
 
   } else {
