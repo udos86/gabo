@@ -33,45 +33,42 @@
       schema: agentOutputSchema,
       onFinish: async ({ object }) => {
         if (object == undefined) return;
-
         await animationResolver;
 
-        if (object.agent === 'teacher') {
-          const userMessage = messages.find(({ id }) => id === messageId);
-          if (userMessage && userMessage.role === 'user') {
-            userMessage.metadata.status = 'done';
-            userMessage.metadata.feedbackText = object.text;
-            userMessage.metadata.passed = object.passed;
+        switch(object.agent) {
+          case 'actor': {
+            const parts: UIMessage['parts'] = [{ type: 'text', text: object.text }];
+            const metadata: AssistantMessageMetadata = {agent: object.agent, position: play.position, status: 'ready'};
+            const pendingMessage = messages.find(({ id, metadata }) => id === messageId && metadata?.status === 'pending');
+      
+            if (pendingMessage === undefined) {
+              const message: GaboUIMessage = { id: messageId, parts, role: 'assistant', metadata };
+              messages.push(message);
+            } else {
+              pendingMessage.parts = parts;
+              pendingMessage.metadata = metadata;
+            }
+
+            scheduleNextMessageAnimation();
+            nextTurn();
+            break;
           }
-          structuredObjects.delete(messageId);
-          if (object.passed) nextTurn();
-          return;
+          
+          case 'teacher': {
+            const userMessage = messages.find(({ id }) => id === messageId);
+            if (userMessage && userMessage.role === 'user') {
+              userMessage.metadata.status = 'done';
+              userMessage.metadata.feedbackText = object.text;
+              userMessage.metadata.passed = object.passed;
+            }
+
+            if (object.passed) nextTurn();
+            break;
+          } 
         }
-
-        const parts: UIMessage['parts'] = [{ type: 'text', text: object.text }];
-
-        const metadata: AssistantMessageMetadata = {
-          agent: object.agent,
-          position: play.position,
-          status: 'ready',
-        };
-
-        const pendingMessage = messages.find(({ id, metadata }) => id === messageId && metadata?.status === 'pending');
-
-        if (pendingMessage === undefined) {
-          const message: GaboUIMessage = { id: messageId, parts, role: 'assistant', metadata };
-          messages.push(message);
-        } else {
-          pendingMessage.parts = parts;
-          pendingMessage.metadata = metadata;
-        }
-
-        scheduleNextMessageAnimation();
 
         structuredObjects.delete(messageId);
-
-        nextTurn();
-      },
+      }
     });
 
     structuredObjects.set(messageId, object);

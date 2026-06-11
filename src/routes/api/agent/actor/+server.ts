@@ -16,7 +16,7 @@ export async function POST({ request }: { request: Request }) {
   const result = await runActorAgent({ actions, dialogue, interlocutors, language, model, role, slugline });
   */
 
-  await new Promise<void>(resolve => setTimeout(() => resolve(), 1000));
+  await new Promise<void>(resolve => setTimeout(() => resolve(), 2000));
 
   const result = streamText({
     model: new MockLanguageModelV3({

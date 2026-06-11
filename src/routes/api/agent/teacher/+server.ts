@@ -16,7 +16,7 @@ export async function POST({ request }: { request: Request }) {
   const result = await runTeacherAgent({ actions, dialogue, input, language, model, role, slugline, interlocutors });
   */
 
-  await new Promise<void>(resolve => setTimeout(() => resolve(), 1000));
+  await new Promise<void>(resolve => setTimeout(() => resolve(), 3000));
 
   const result = streamText({
     model: new MockLanguageModelV3({
