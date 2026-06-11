@@ -23,3 +23,14 @@ The application relies on two distinct AI agents that work together to create th
 2. The User provides input via the chat interface to respond or initiate conversation.
 3. The **Teacher Agent** evaluates the user's input. It provides textual feedback and a pass/fail determination.
 4. If the user passes, the beat advances. If the next speaker is an AI, the Actor Agent is invoked again. If the user fails, the scene remains on the current beat, and the user tries again, guided by the Teacher's feedback.
+
+## Development & Commands
+
+The project uses Vite and SvelteKit. Below are the key commands for developing, linting, and testing the application:
+
+- **Start Development Server**: `npm run dev` (Starts the Vite dev server, typically on `http://localhost:5173`)
+- **Lint Code**: `npm run lint` (Runs ESLint)
+- **Check Types/Svelte**: `npm run check` (Runs `svelte-check` against the TypeScript configuration)
+- **Run Unit Tests**: `npm run test:unit` (Runs Vitest)
+- **Build for Production**: `npm run build`
+- **Preview Production Build**: `npm run preview`
