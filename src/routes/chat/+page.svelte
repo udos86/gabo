@@ -35,12 +35,12 @@
         if (object == undefined) return;
         await animationResolver;
 
-        switch(object.agent) {
+        switch (object.agent) {
           case 'actor': {
             const parts: UIMessage['parts'] = [{ type: 'text', text: object.text }];
-            const metadata: AssistantMessageMetadata = {agent: object.agent, position: play.position, status: 'ready'};
+            const metadata: AssistantMessageMetadata = { agent: object.agent, position: play.position, status: 'ready' };
             const pendingMessage = messages.find(({ id, metadata }) => id === messageId && metadata?.status === 'pending');
-      
+
             if (pendingMessage === undefined) {
               const message: GaboUIMessage = { id: messageId, parts, role: 'assistant', metadata };
               messages.push(message);
@@ -53,7 +53,7 @@
             nextTurn();
             break;
           }
-          
+
           case 'teacher': {
             const userMessage = messages.find(({ id }) => id === messageId);
             if (userMessage && userMessage.role === 'user') {
@@ -64,11 +64,11 @@
 
             if (object.passed) nextTurn();
             break;
-          } 
+          }
         }
 
         structuredObjects.delete(messageId);
-      }
+      },
     });
 
     structuredObjects.set(messageId, object);

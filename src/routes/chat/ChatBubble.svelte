@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { fade, fly } from 'svelte/transition';
+  import { fade, fly, slide } from 'svelte/transition';
   import type { GaboUIMessage, UserMessageMetadata } from '$lib/ai/schema';
 
   interface Props {
@@ -13,10 +13,14 @@
     return params.role === 'user' ? fade(node, { duration: 200 }) : fly(node, { x: -60, duration: 200, opacity: 0 });
   }
 
-  let showTooltip = $state(false);
+  function getPartText(part: Extract<GaboUIMessage['parts'][number], { type: 'text' }>) {
+    return animatedLength !== undefined ? part.text.slice(0, animatedLength) : part.text;
+  }
+
+  let showFeedback = $state(false);
 
   const isUser = $derived(message.role === 'user');
-  const userMeta = $derived(message.role === 'user' ? message.metadata as UserMessageMetadata : undefined);
+  const userMeta = $derived(message.role === 'user' ? (message.metadata as UserMessageMetadata) : undefined);
   const isAssistant = $derived(message.role === 'assistant');
   const avatarSrc = $derived(message.role === 'assistant' && message.metadata.agent === 'actor' ? '/waiter.png' : '/teacher.png');
 
@@ -32,24 +36,11 @@
 
     return `${base} ${alignment} ${feedback}`.trim();
   });
-
-  function getPartText(part: Extract<GaboUIMessage['parts'][number], { type: 'text' }>) {
-    return animatedLength !== undefined ? part.text.slice(0, animatedLength) : part.text;
-  }
 </script>
 
 <li class={liClass} in:messageIn={{ role: message.role }} out:fade={{ duration: 200 }}>
   {#if isUser && userMeta}
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-    <div 
-      class="relative shrink-0 cursor-pointer"
-      onmouseenter={() => showTooltip = true}
-      onmouseleave={() => showTooltip = false}
-      onclick={() => showTooltip = !showTooltip}
-      role="button"
-      tabindex="0"
-    >
+    <div class="relative shrink-0">
       {#if userMeta.status === 'pending' || userMeta.status === 'ready'}
         <!-- Outer Glow -->
         <div class="absolute -inset-2 rounded-full bg-indigo-500/15 blur-xl animate-avatar-glow"></div>
@@ -66,12 +57,6 @@
           </div>
         {/if}
       </div>
-
-      {#if showTooltip && userMeta.status === 'done' && userMeta.feedbackText}
-        <div class="absolute right-full top-0 mr-4 w-64 p-3 bg-slate-800 text-white text-sm rounded-lg shadow-lg z-30 break-words pointer-events-none">
-          {userMeta.feedbackText}
-        </div>
-      {/if}
     </div>
   {/if}
   {#if isAssistant}
@@ -87,14 +72,32 @@
   {/if}
 
   {#if (isAssistant && (message.metadata?.status === 'animating' || message.metadata?.status === 'done')) || isUser}
-    <div class={bubbleClass}>
-      {#each message.parts as part, index (index)}
-        {#if part.type === 'text'}
-          <div class={animatedLength !== undefined && isAssistant ? 'transition-all duration-200' : ''}>
-            {isUser ? part.text : getPartText(part)}
+    <div class="flex-1 flex flex-col min-w-0">
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div
+        class="{bubbleClass} {isUser && userMeta?.status === 'done' ? 'cursor-pointer hover:opacity-90 active:opacity-100 transition-opacity' : ''}"
+        onclick={() => {
+          if (isUser && userMeta?.status === 'done') showFeedback = !showFeedback;
+        }}>
+        {#each message.parts as part, index (index)}
+          {#if part.type === 'text'}
+            <div class={animatedLength !== undefined && isAssistant ? 'transition-all duration-200' : ''}>
+              {isUser ? part.text : getPartText(part)}
+            </div>
+          {/if}
+        {/each}
+      </div>
+      {#if isUser && userMeta?.status === 'done' && userMeta?.feedbackText && showFeedback}
+        <div transition:slide={{ duration: 250 }} style="overflow-anchor: none;" class="w-full flex justify-end">
+          <div class="mt-3 p-4 rounded-2xl text-sm w-fit max-w-[60%] {userMeta.passed ? 'bg-green-50 text-green-800 border border-green-200 shadow-sm' : 'bg-red-50 text-red-800 border border-red-200 shadow-sm'}">
+            <div class="flex items-start gap-3">
+              <span class="text-xl leading-none">{userMeta.passed ? '🎉' : '💡'}</span>
+              <span class="leading-relaxed font-medium">{userMeta.feedbackText}</span>
+            </div>
           </div>
-        {/if}
-      {/each}
+        </div>
+      {/if}
     </div>
   {/if}
 </li>
