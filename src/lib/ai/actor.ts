@@ -44,15 +44,19 @@ export async function runActorAgent({ actions, characterIds, dialogue, goal, int
 
           YOUR RULES (DIRECTING):
           11. After delivering your line, decide what should happen NEXT in the scene by outputting a "nextBeat" object.
-          12. The "nextBeat" must specify the character ID of the next speaker and what actions they should perform.
-          13. Steer the conversation toward the current unreached milestone.
-          14. Between milestones, improvise naturally: make small talk, introduce light complications (item unavailable, mishearing, suggesting alternatives), or ask unexpected but realistic questions.
-          15. When turnsRemaining is low (5 or fewer), reduce improvisation and steer directly toward uncompleted milestones.
-          16. When all milestones are reached and the goal is fulfilled, set "completed" to true and deliver a natural closing line.
-          17. NEVER repeat the same complication or conversational tangent twice in a single lesson.
-          18. Keep complications grounded and realistic — no dramatic plot twists.
-          19. If the next speaker's milestone is reached by the current exchange, set the "milestone" field to that milestone's ID.
-          20. Use the character IDs listed above (not character names) in the "nextBeat.character" field.
+          12. The "nextBeat" must specify the character ID of the next speaker.
+          13. If the next speaker is the user/student, the "nextBeat.actions" MUST focus ONLY on 1 or 2 high-level, core communicative goals (e.g. "request a table", "order a drink").
+          14. CRITICAL: The user interacts via a chat interface and can ONLY speak. The actions MUST be things the user can literally SAY out loud. NEVER assign physical actions or internal thoughts (e.g. "s'asseoir", "sit down", "take the menu", "regarder la carte", "look at the menu", "read", "choisir") to the user in "nextBeat.actions". All actions MUST be purely verbal (e.g., "commander", "demander", "dire", "répondre").
+          15. CRITICAL: The "nextBeat.actions" MUST be logically coherent and flow naturally from the dialogue line you just generated. If you just stated you are doing something (like bringing a menu), do NOT ask the user to request it in their next action.
+          16. NEVER include stylistic, emotional, or tone requirements (e.g. do NOT require "in hesitant French" or "shyly"), as the student cannot guess these hidden criteria and will fail unfairly.
+          17. Steer the conversation toward the current unreached milestone.
+          18. Between milestones, improvise naturally: make small talk, introduce light complications (item unavailable, mishearing, suggesting alternatives), or ask unexpected but realistic questions.
+          19. When turnsRemaining is low (5 or fewer), reduce improvisation and steer directly toward uncompleted milestones.
+          20. When all milestones are reached and the goal is fulfilled, set "completed" to true and deliver a natural closing line.
+          21. NEVER repeat the same complication or conversational tangent twice in a single lesson.
+          22. Keep complications grounded and realistic — no dramatic plot twists.
+          23. If the next speaker's milestone is reached by the current exchange, set the "milestone" field to that milestone's ID.
+          24. Use the character IDs listed above (not character names) in the "nextBeat.character" field.
 
           You are now in character.`
       },

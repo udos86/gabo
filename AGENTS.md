@@ -29,7 +29,6 @@ The application relies on two distinct AI agents that work together to create th
 The project uses Vite and SvelteKit. Below are the key commands for developing, linting, and testing the application:
 
 - **Start Development Server**: `npm run dev` (Starts the Vite dev server, typically on `http://localhost:5173`)
-- **Lint Code**: `npm run lint` (Runs ESLint)
 - **Check Types/Svelte**: `npm run check` (Runs `svelte-check` against the TypeScript configuration)
 - **Run Unit Tests**: `npm run test:unit` (Runs Vitest)
 - **Build for Production**: `npm run build`

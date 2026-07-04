@@ -49,7 +49,7 @@ export type TeacherAgentContext = AgentContext & TeacherAgentInput;
 export const nextBeatSchema = z.object({
   character: z.string().describe('The character ID of the next speaker.'),
   actions: z.array(z.string()).describe('What the next speaker should do or say.'),
-  milestone: z.string().optional().describe('If this beat reaches a milestone, the milestone ID. Otherwise omit.'),
+  milestone: z.string().nullable().describe('If this beat reaches a milestone, the milestone ID. Otherwise null.'),
   completed: z.boolean().describe('True if the lesson goal is now fully achieved.'),
 });
 

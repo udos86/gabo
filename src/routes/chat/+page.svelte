@@ -37,6 +37,7 @@
 
         switch (object.agent) {
           case 'actor': {
+            console.log('actor', object);
             const parts: UIMessage['parts'] = [{ type: 'text', text: object.text }];
             const metadata: AssistantMessageMetadata = { agent: object.agent, characterId: play.character.id, status: 'ready' };
             const pendingMessage = messages.find(({ id, metadata }) => id === messageId && metadata?.status === 'pending');

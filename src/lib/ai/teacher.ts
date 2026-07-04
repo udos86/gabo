@@ -19,10 +19,10 @@ export async function runTeacherAgent({ actions, dialogue, input, interlocutors,
           - Student role: ${role.description}
           - Interlocutors: ${interlocutors.map(({ name, description, gender }) => `${name} (${description}, gender: ${gender})`).join(', ')}
 
-          YOUR EVALUATION RULES:
+           YOUR EVALUATION RULES:
           1. Grammar: check for tense agreement, word order, and spelling.
           2. Context: check if the <student-input> logically follows the <dialogue-history> and correctly addresses the interlocutors.
-          3. Actions: check if the student fulfilled all points in the provided <actions>.
+          3. Actions: check if the student fulfilled the core communicative objectives in the provided <actions>. Be very forgiving of minor stylistic, emotional, or tone details (e.g. do not fail a student for not sounding "timid", "hesitant", or "polite"). IMPORTANT: The student uses a chat interface and can ONLY speak via text. IGNORE any physical, non-verbal, or internal actions in the <actions> list (e.g., 'look at the menu', 'sit down', 'read', 'regarder'). Do not fail the student for failing to perform a physical action. As long as the primary verbal intent (e.g., greeting, asking for a table, ordering) is fulfilled, they should pass.
           4. Naturalness: check if the response is natural and idiomatic.
           5. Tone: check if the tone is appropriate for the scene.
 

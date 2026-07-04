@@ -2,20 +2,18 @@ import { createOpenAI } from "@ai-sdk/openai";
 
 import { OPENAI_API_KEY, ACTOR_MODEL } from '$env/static/private';
 import { runActorAgent } from "$lib/ai/actor.js";
-import { Output, simulateReadableStream, streamText } from "ai";
-import { MockLanguageModelV3 } from "ai/test";
-import { actorOutputSchema, type ActorAgentContext } from "$lib/ai/schema.js";
+import type { ActorAgentContext } from "$lib/ai/schema.js";
 
 const openai = createOpenAI({ apiKey: OPENAI_API_KEY });
 
 export async function POST({ request }: { request: Request }) {
-  /*
+
   const model = openai(ACTOR_MODEL);
   const body = await request.json();
   const { actions, characterIds, dialogue, goal, interlocutors, language, milestones, role, slugline, turnsRemaining } = body as ActorAgentContext;
   const result = await runActorAgent({ actions, characterIds, dialogue, goal, interlocutors, language, milestones, model, role, slugline, turnsRemaining });
-  */
 
+  /*
   await new Promise<void>(resolve => setTimeout(() => resolve(), 2000));
 
   const result = streamText({
@@ -39,6 +37,7 @@ export async function POST({ request }: { request: Request }) {
             { type: 'text-delta', id: 'text-1', delta: '"nextBeat": {' },
             { type: 'text-delta', id: 'text-1', delta: '"character": "0815",' },
             { type: 'text-delta', id: 'text-1', delta: '"actions": ["greet the waiter back", "ask for a table"],' },
+            { type: 'text-delta', id: 'text-1', delta: '"milestone": null,' },
             { type: 'text-delta', id: 'text-1', delta: '"completed": false' },
             { type: 'text-delta', id: 'text-1', delta: '}' },
             { type: 'text-delta', id: 'text-1', delta: ' }' },
@@ -68,7 +67,7 @@ export async function POST({ request }: { request: Request }) {
     output: Output.object({ schema: actorOutputSchema }),
     prompt: [{ role: 'assistant', content: '' }]
   }) as unknown as Awaited<ReturnType<typeof runActorAgent>>;
-
+  */
 
   if (result === undefined) return new Response("Invalid agent type", { status: 400 });
 

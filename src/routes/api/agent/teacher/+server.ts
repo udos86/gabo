@@ -2,20 +2,17 @@ import { createOpenAI } from "@ai-sdk/openai";
 
 import { OPENAI_API_KEY, TEACHER_MODEL } from '$env/static/private';
 import { runTeacherAgent } from "$lib/ai/teacher";
-import { Output, simulateReadableStream, streamText } from "ai";
-import { MockLanguageModelV3 } from "ai/test";
-import { teacherOutputSchema, type TeacherAgentContext } from "$lib/ai/schema.js";
+import type { TeacherAgentContext } from "$lib/ai/schema.js";
 
 const openai = createOpenAI({ apiKey: OPENAI_API_KEY });
 
 export async function POST({ request }: { request: Request }) {
-  /*
+
   const model = openai(TEACHER_MODEL);
   const body = await request.json();
   const { actions, dialogue, input, interlocutors, language, role, slugline } = body as TeacherAgentContext;
   const result = await runTeacherAgent({ actions, dialogue, input, language, model, role, slugline, interlocutors });
-  */
-
+  /*
   await new Promise<void>(resolve => setTimeout(() => resolve(), 3000));
 
   const result = streamText({
@@ -63,7 +60,7 @@ export async function POST({ request }: { request: Request }) {
     output: Output.object({ schema: teacherOutputSchema }),
     prompt: [{ role: 'assistant', content: '' }]
   }) as unknown as Awaited<ReturnType<typeof runTeacherAgent>>;
-
+  */
   if (result === undefined) return new Response("Invalid agent type", { status: 400 });
 
   return result.toTextStreamResponse();
