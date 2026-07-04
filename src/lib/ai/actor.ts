@@ -1,17 +1,7 @@
-import { Output, streamText, type LanguageModel } from "ai";
+import { Output, streamText } from "ai";
 
-import { actorOutputSchema, type GaboUIMessage } from "$lib/ai/schema";
-import type { Beat, CharacterRole, Play } from "$lib/screenplay/screenplay";
-
-export interface ActorAgentContext {
-  actions: Beat['actions'];
-  dialogue: string;
-  interlocutors: CharacterRole[];
-  language: string;
-  model: LanguageModel;
-  role: CharacterRole;
-  slugline: string;
-}
+import { actorOutputSchema, type ActorAgentContext, type GaboUIMessage } from "$lib/ai/schema";
+import type { Play } from "$lib/screenplay/screenplay";
 
 export async function runActorAgent({ actions, dialogue, interlocutors, language, model, role, slugline }: ActorAgentContext) {
   return streamText({
