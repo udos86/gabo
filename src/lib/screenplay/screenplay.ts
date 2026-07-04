@@ -22,36 +22,45 @@ export interface Scene {
   location: string;
   time: string;
   characters: Character['id'][];
-  dialog: Array<Beat>;
+}
+
+export interface Milestone {
+  id: string;
+  description: string;
 }
 
 export interface Screenplay {
   characters: Record<Character['id'], Character>;
-  scenes: Array<Scene>;
+  scene: Scene;
+  opening: Beat;
+  goal: string;
+  milestones: Milestone[];
+  maxTurns: number;
 }
 
 export interface PlayConfig {
   screenplay: Screenplay;
-  sceneStartIndex?: number;
-  beatStartIndex?: number;
 }
 
 export class Play {
   #screenplay: Screenplay;
-  #currentSceneIndex: number = -1;
-  #currentBeatIndex: number = -1;
-  #sceneStartIndex: number;
-  #beatStartIndex: number;
-  #generator: ReturnType<typeof this.beats> | null = null;
+  #currentBeat: Beat | null = null;
+  #milestoneStatus: Map<string, boolean>;
+  #turnsElapsed: number = 0;
+  #completed: boolean = false;
+  #started: boolean = false;
 
-  constructor({ screenplay, sceneStartIndex = 0, beatStartIndex = 0 }: PlayConfig) {
+  constructor({ screenplay }: PlayConfig) {
     this.#screenplay = screenplay;
-    this.#sceneStartIndex = sceneStartIndex;
-    this.#beatStartIndex = beatStartIndex;
+    this.#milestoneStatus = new Map(
+      screenplay.milestones.map(({ id }) => [id, false])
+    );
   }
 
+  // -- Reads --
+
   get scene(): Scene {
-    return this.#screenplay.scenes[this.#currentSceneIndex]!;
+    return this.#screenplay.scene;
   }
 
   get slugline(): string {
@@ -60,7 +69,8 @@ export class Play {
   }
 
   get beat(): Beat {
-    return this.scene.dialog[this.#currentBeatIndex]!;
+    if (this.#currentBeat === null) throw new Error('No current beat. Call start() or setNextBeat() first.');
+    return this.#currentBeat;
   }
 
   get character(): Character {
@@ -71,49 +81,105 @@ export class Play {
 
   get others(): Character[] {
     const characterId = this.beat.character;
-    return this.scene.characters.map(id => this.#screenplay.characters[id]!).filter(character => character.id !== characterId);
+    return this.scene.characters
+      .map(id => this.#screenplay.characters[id]!)
+      .filter(character => character.id !== characterId);
   }
 
-  get position(): [sceneIndex: number, beatIndex: number] {
-    return [this.#currentSceneIndex, this.#currentBeatIndex];
+  get goal(): string {
+    return this.#screenplay.goal;
   }
 
-  getCharacterAtPosition(position: [sceneIndex: number, beatIndex: number]): Character {
-    const [sceneIndex, beatIndex] = position;
-    const character = this.#screenplay.scenes[sceneIndex]?.dialog[beatIndex]?.character;
-    if (character === undefined) throw new Error(`Character with id ${character} not found in screenplay.`);
-    return this.#screenplay.characters[character]!;
+  get milestones(): Array<Milestone & { reached: boolean }> {
+    return this.#screenplay.milestones.map(m => ({
+      ...m,
+      reached: this.#milestoneStatus.get(m.id) ?? false
+    }));
   }
 
-  next(): boolean {
-    if (this.#generator === null) this.#generator = this.beats();
-    const result = this.#generator.next();
-    return result.done ?? false;
+  get currentMilestone(): Milestone | null {
+    return this.#screenplay.milestones.find(
+      m => !this.#milestoneStatus.get(m.id)
+    ) ?? null;
   }
 
-  end(): boolean {
-    if (this.#currentSceneIndex < 0) return false;
-    const isLastScene = this.#currentSceneIndex === this.#screenplay.scenes.length - 1;
-    const isLastBeat = isLastScene && this.#currentBeatIndex === this.scene.dialog.length - 1;
-    return isLastBeat;
+  get completedMilestones(): string[] {
+    return [...this.#milestoneStatus.entries()]
+      .filter(([, reached]) => reached)
+      .map(([id]) => id);
   }
 
-  *beats() {
-    let sceneIndex = this.#sceneStartIndex;
+  get turnsRemaining(): number {
+    return this.#screenplay.maxTurns - this.#turnsElapsed;
+  }
 
-    while (sceneIndex < this.#screenplay.scenes.length) {
-      let beatIndex = sceneIndex === this.#sceneStartIndex ? this.#beatStartIndex : 0;
-      const dialog = this.#screenplay.scenes[sceneIndex]!.dialog;
+  get turnsElapsed(): number {
+    return this.#turnsElapsed;
+  }
 
-      while (beatIndex < dialog.length) {
-        this.#currentSceneIndex = sceneIndex;
-        this.#currentBeatIndex = beatIndex;
+  get isCompleted(): boolean {
+    return this.#completed;
+  }
 
-        const { actions } = this.beat;
-        yield { actions, character: this.character, beatIndex: this.#currentBeatIndex, sceneIndex: this.#currentSceneIndex };
-        beatIndex++;
-      }
-      sceneIndex++;
+  get isStarted(): boolean {
+    return this.#started;
+  }
+
+  getCharacterById(id: string): Character {
+    const character = this.#screenplay.characters[id];
+    if (character === undefined) throw new Error(`Character with id ${id} not found in screenplay.`);
+    return character;
+  }
+
+  /** Returns a map of character IDs to character names for the Actor's context. */
+  get characterIdMap(): Record<string, string> {
+    return Object.fromEntries(
+      Object.values(this.#screenplay.characters).map(c => [c.id, c.role.name])
+    );
+  }
+
+  // -- Mutations --
+
+  /** Load the authored opening beat and mark the play as started. */
+  start(): void {
+    this.#currentBeat = this.#screenplay.opening;
+    this.#started = true;
+  }
+
+  /** Get the AI (assistant) character in the scene. */
+  get aiCharacter(): Character {
+    const aiChar = this.scene.characters
+      .map(id => this.#screenplay.characters[id]!)
+      .find(c => c.actor === 'assistant');
+    if (!aiChar) throw new Error('No assistant character found in scene.');
+    return aiChar;
+  }
+
+  /** Set the next beat from the Actor agent's output. */
+  setNextBeat(beat: Beat): void {
+    this.#currentBeat = beat;
+    this.#turnsElapsed++;
+  }
+
+  /** Advance the turn counter and set a reactive beat for the AI character. */
+  advanceTurn(): void {
+    this.#turnsElapsed++;
+    this.#currentBeat = {
+      character: this.aiCharacter.id,
+      actions: [],
+    };
+  }
+
+  /** Mark a milestone as reached. */
+  reachMilestone(id: string): void {
+    if (!this.#milestoneStatus.has(id)) {
+      throw new Error(`Unknown milestone id: ${id}`);
     }
+    this.#milestoneStatus.set(id, true);
+  }
+
+  /** Mark the lesson as completed. */
+  complete(): void {
+    this.#completed = true;
   }
 }

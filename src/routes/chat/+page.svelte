@@ -38,7 +38,7 @@
         switch (object.agent) {
           case 'actor': {
             const parts: UIMessage['parts'] = [{ type: 'text', text: object.text }];
-            const metadata: AssistantMessageMetadata = { agent: object.agent, position: play.position, status: 'ready' };
+            const metadata: AssistantMessageMetadata = { agent: object.agent, characterId: play.character.id, status: 'ready' };
             const pendingMessage = messages.find(({ id, metadata }) => id === messageId && metadata?.status === 'pending');
 
             if (pendingMessage === undefined) {
@@ -50,7 +50,28 @@
             }
 
             scheduleNextMessageAnimation();
-            nextTurn();
+
+            // Process the Actor's nextBeat: milestones, completion, and advance
+            const { nextBeat } = object;
+
+            if (nextBeat.milestone) {
+              play.reachMilestone(nextBeat.milestone);
+            }
+
+            if (nextBeat.completed) {
+              play.complete();
+              // Lesson is done — don't advance further
+              break;
+            }
+
+            // Set the Actor-generated beat as the current beat and continue
+            play.setNextBeat({ character: nextBeat.character, actions: nextBeat.actions });
+
+            // If the next speaker is the AI, invoke the Actor again
+            if (play.character.actor === 'assistant') {
+              invokeActor();
+            }
+            // If the next speaker is the user, we wait for their input
             break;
           }
 
@@ -62,7 +83,11 @@
               userMessage.metadata.passed = object.passed;
             }
 
-            if (object.passed) nextTurn();
+            if (object.passed) {
+              // User passed — invoke the Actor to generate the next beat
+              play.advanceTurn();
+              invokeActor();
+            }
             break;
           }
         }
@@ -96,43 +121,51 @@
     animatedMessageLength = 0;
   }
 
-  function nextTurn() {
-    const done = play.next();
-    if (done) return;
-    const { beat, character, position, slugline } = play;
+  /** Fire the Actor agent for the current beat. */
+  function invokeActor() {
+    if (play.isCompleted) return;
+    const { beat, character, slugline } = play;
 
-    if (character.actor === 'assistant') {
-      const actorMessage: GaboUIMessage = {
-        id: globalThis.crypto.randomUUID(),
-        parts: [{ type: 'text', text: '' }],
-        role: 'assistant',
-        metadata: { agent: 'actor', position, status: 'pending' },
-      };
+    const actorMessage: GaboUIMessage = {
+      id: globalThis.crypto.randomUUID(),
+      parts: [{ type: 'text', text: '' }],
+      role: 'assistant',
+      metadata: { agent: 'actor', characterId: character.id, status: 'pending' },
+    };
 
-      messages.push(actorMessage);
+    messages.push(actorMessage);
 
-      createStructuredObject(actorMessage.id, 'actor', {
-        language: 'French',
-        slugline,
-        role: character.role,
-        actions: beat.actions,
-        interlocutors: play.others.map(({ role }) => role),
-        dialogue: convertToDialogue(messages, play),
-      });
-    }
+    createStructuredObject(actorMessage.id, 'actor', {
+      language: 'French',
+      slugline,
+      role: character.role,
+      actions: beat.actions,
+      interlocutors: play.others.map(({ role }) => role),
+      dialogue: convertToDialogue(messages, play),
+      goal: play.goal,
+      milestones: play.milestones,
+      turnsRemaining: play.turnsRemaining,
+      characterIds: play.characterIdMap,
+    });
+  }
+
+  /** Start the lesson by loading the opening beat and invoking the Actor. */
+  function startLesson() {
+    play.start();
+    invokeActor();
   }
 
   function onSubmit(event: Event) {
     event.preventDefault();
     clearAnimation();
 
-    const { slugline, character, beat, position } = play;
+    const { slugline, character, beat } = play;
 
     const userMessage: GaboUIMessage = {
       id: globalThis.crypto.randomUUID(),
       parts: [{ type: 'text', text: chatInput }],
       role: 'user',
-      metadata: { position, status: 'pending' },
+      metadata: { characterId: character.id, status: 'pending' },
     };
 
     messages.push(userMessage);
@@ -175,7 +208,7 @@
     chatElement?.scroll({ behavior: 'smooth', top: chatElement.scrollHeight });
   });
 
-  onMount(() => nextTurn());
+  onMount(() => startLesson());
 </script>
 
 <ul class="grow overflow-y-auto pt-8 scroll-smooth" bind:this={chatElement}>

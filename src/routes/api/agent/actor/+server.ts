@@ -12,8 +12,8 @@ export async function POST({ request }: { request: Request }) {
   /*
   const model = openai(ACTOR_MODEL);
   const body = await request.json();
-  const { actions, dialogue, interlocutors, language, role, slugline } = body as ActorAgentContext;
-  const result = await runActorAgent({ actions, dialogue, interlocutors, language, model, role, slugline });
+  const { actions, characterIds, dialogue, goal, interlocutors, language, milestones, role, slugline, turnsRemaining } = body as ActorAgentContext;
+  const result = await runActorAgent({ actions, characterIds, dialogue, goal, interlocutors, language, milestones, model, role, slugline, turnsRemaining });
   */
 
   await new Promise<void>(resolve => setTimeout(() => resolve(), 2000));
@@ -34,27 +34,13 @@ export async function POST({ request }: { request: Request }) {
             { type: 'text-delta', id: 'text-1', delta: `Bienvenue ` },
             { type: 'text-delta', id: 'text-1', delta: `dans notre ` },
             { type: 'text-delta', id: 'text-1', delta: `petit ` },
-            { type: 'text-delta', id: 'text-1', delta: `café. ` },
-            { type: 'text-delta', id: 'text-1', delta: `Les couleurs ` },
-            { type: 'text-delta', id: 'text-1', delta: `de l'automne ` },
-            { type: 'text-delta', id: 'text-1', delta: `sont ` },
-            { type: 'text-delta', id: 'text-1', delta: `magnifiques ` },
-            { type: 'text-delta', id: 'text-1', delta: `sur les ` },
-            { type: 'text-delta', id: 'text-1', delta: `boulevards ` },
-            { type: 'text-delta', id: 'text-1', delta: `aujourd'hui. ` },
-            { type: 'text-delta', id: 'text-1', delta: `S'il vous plaît, ` },
-            { type: 'text-delta', id: 'text-1', delta: `entrez ` },
-            { type: 'text-delta', id: 'text-1', delta: `pour vous ` },
-            { type: 'text-delta', id: 'text-1', delta: `mettre ` },
-            { type: 'text-delta', id: 'text-1', delta: `à l'abri ` },
-            { type: 'text-delta', id: 'text-1', delta: `du vent ` },
-            { type: 'text-delta', id: 'text-1', delta: `frais. ` },
-            { type: 'text-delta', id: 'text-1', delta: `Puis-je ` },
-            { type: 'text-delta', id: 'text-1', delta: `vous apporter ` },
-            { type: 'text-delta', id: 'text-1', delta: `un café ` },
-            { type: 'text-delta', id: 'text-1', delta: `au lait ` },
-            { type: 'text-delta', id: 'text-1', delta: `bien chaud ?` },
-            { type: 'text-delta', id: 'text-1', delta: `"` },
+            { type: 'text-delta', id: 'text-1', delta: `café."` },
+            { type: 'text-delta', id: 'text-1', delta: ',' },
+            { type: 'text-delta', id: 'text-1', delta: '"nextBeat": {' },
+            { type: 'text-delta', id: 'text-1', delta: '"character": "0815",' },
+            { type: 'text-delta', id: 'text-1', delta: '"actions": ["greet the waiter back", "ask for a table"],' },
+            { type: 'text-delta', id: 'text-1', delta: '"completed": false' },
+            { type: 'text-delta', id: 'text-1', delta: '}' },
             { type: 'text-delta', id: 'text-1', delta: ' }' },
             { type: 'text-end', id: 'text-1' },
             {

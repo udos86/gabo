@@ -7,13 +7,23 @@ export const characterRoleSchema = z.object({
   gender: z.enum(['male', 'female', 'diverse'])
 });
 
+export const milestoneInputSchema = z.object({
+  id: z.string(),
+  description: z.string(),
+  reached: z.boolean()
+});
+
 export const actorInputSchema = z.object({
   actions: z.array(z.string()),
   dialogue: z.string(),
   interlocutors: z.array(characterRoleSchema),
   language: z.string(),
   role: characterRoleSchema,
-  slugline: z.string()
+  slugline: z.string(),
+  goal: z.string(),
+  milestones: z.array(milestoneInputSchema),
+  turnsRemaining: z.number(),
+  characterIds: z.record(z.string(), z.string()),
 });
 
 export type AgentContext = { model: LanguageModel };
@@ -36,9 +46,19 @@ export type TeacherAgentInput = z.infer<typeof teacherInputSchema>;
 
 export type TeacherAgentContext = AgentContext & TeacherAgentInput;
 
+export const nextBeatSchema = z.object({
+  character: z.string().describe('The character ID of the next speaker.'),
+  actions: z.array(z.string()).describe('What the next speaker should do or say.'),
+  milestone: z.string().optional().describe('If this beat reaches a milestone, the milestone ID. Otherwise omit.'),
+  completed: z.boolean().describe('True if the lesson goal is now fully achieved.'),
+});
+
+export type NextBeat = z.infer<typeof nextBeatSchema>;
+
 export const actorOutputSchema = z.object({
   agent: z.literal('actor'),
-  text: z.string()
+  text: z.string().describe('The dialogue line to speak.'),
+  nextBeat: nextBeatSchema,
 });
 
 export type ActorOutput = z.infer<typeof actorOutputSchema>;
@@ -59,7 +79,7 @@ export const agentOutputSchema = z.discriminatedUnion('agent', [
 export type AgentOutput = z.infer<typeof agentOutputSchema>;
 
 export const messageMetadataSchema = z.object({
-  position: z.tuple([z.number(), z.number()]),
+  characterId: z.string(),
   status: z.enum(['pending', 'ready', 'animating', 'done'])
 });
 

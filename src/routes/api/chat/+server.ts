@@ -29,7 +29,11 @@ export async function POST({ request }) {
       role,
       actions,
       dialogue: "",
-      interlocutors: []
+      interlocutors: [],
+      goal: "",
+      milestones: [],
+      turnsRemaining: 0,
+      characterIds: {},
     });
 
   } else {
