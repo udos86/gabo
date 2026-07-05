@@ -17,6 +17,7 @@
     return animatedLength !== undefined ? part.text.slice(0, animatedLength) : part.text;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let showFeedback = $state(false);
 
   const isUser = $derived(message.role === 'user');
@@ -29,9 +30,11 @@
     const alignment = isUser ? 'user-bubble r' : 'assistant-bubble l';
 
     let feedback = '';
-    if (isUser && userMeta && userMeta.status === 'done') {
-      feedback = userMeta.passed ? 'teacher-passed' : 'teacher-failed';
+    /*
+    if (isUser && userMeta?.status === 'done') {
+      feedback = userMeta?.passed ? 'teacher-passed' : 'teacher-failed';
     }
+    */
 
     return `${base} ${alignment} ${feedback}`.trim();
   });
@@ -51,11 +54,13 @@
         <div class="relative">
           <img width="56" height="56" src="/user.png" alt="avatar" class="relative rounded-full border-2 border-slate-300 shadow-sm transition-all duration-500 ring-1 ring-slate-200" />
 
-          {#if userMeta.status === 'done'}
-            <div class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-sm text-white {userMeta.passed ? 'bg-green-500 ring-2 ring-white' : 'bg-red-500 ring-2 ring-white'} z-20 shadow-sm">
-              {userMeta.passed ? '✓' : '✗'}
+          <!--
+          {#if userMeta?.status === 'done'}
+            <div class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-sm text-white {userMeta?.passed ? 'bg-green-500 ring-2 ring-white' : 'bg-red-500 ring-2 ring-white'} z-20 shadow-sm">
+              {userMeta?.passed ? '✓' : '✗'}
             </div>
           {/if}
+          -->
         </div>
       </div>
     {/if}
@@ -76,9 +81,9 @@
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
-          class="{bubbleClass} {isUser && userMeta?.status === 'done' ? 'cursor-pointer hover:opacity-90 active:opacity-100 transition-opacity' : ''}"
+          class={bubbleClass}
           onclick={() => {
-            if (isUser && userMeta?.status === 'done') showFeedback = !showFeedback;
+            // if (isUser && userMeta?.status === 'done') showFeedback = !showFeedback;
           }}>
           {#each message.parts as part, index (index)}
             {#if part.type === 'text'}
@@ -91,34 +96,34 @@
       </div>
     {/if}
 
+    <!--
     {#if isUser && userMeta?.status === 'done' && userMeta?.feedbackText && showFeedback}
       <div
         transition:fly={{ x: 50, duration: 250 }}
         style="overflow-anchor: none;"
         class="absolute top-[calc(100%+8px)] right-0 z-30 rounded-2xl text-sm w-fit max-w-[70%] border shadow-md overflow-hidden transition-all duration-300
-          {userMeta.passed ? 'bg-emerald-50/95 border-emerald-200 text-emerald-950 shadow-emerald-100/50' : 'bg-rose-50/90 border-rose-200 text-rose-950 shadow-rose-100/50'}">
-        <!-- Card Header -->
+          {userMeta?.passed ? 'bg-emerald-50/95 border-emerald-200 text-emerald-950 shadow-emerald-100/50' : 'bg-rose-50/90 border-rose-200 text-rose-950 shadow-rose-100/50'}">
         <div
           class="flex items-center justify-between gap-4 px-4 py-2 border-b border-dashed select-none
-          {userMeta.passed ? 'border-emerald-200/60 bg-emerald-100/40' : 'border-rose-200/60 bg-rose-100/40'}">
+          {userMeta?.passed ? 'border-emerald-200/60 bg-emerald-100/40' : 'border-rose-200/60 bg-rose-100/40'}">
           <div class="flex items-center gap-2">
             <img src="/teacher.png" alt="Teacher" class="w-5 h-5 rounded-full border border-slate-200 shadow-2xs" />
             <span class="font-bold text-[11px] uppercase tracking-wider opacity-85">Teacher Feedback</span>
           </div>
           <span
             class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider
-            {userMeta.passed ? 'bg-emerald-200/60 text-emerald-800' : 'bg-rose-200/60 text-rose-800'}">
-            {userMeta.passed ? 'Passed' : 'Needs Review'}
+            {userMeta?.passed ? 'bg-emerald-200/60 text-emerald-800' : 'bg-rose-200/60 text-rose-800'}">
+            {userMeta?.passed ? 'Passed' : 'Needs Review'}
           </span>
         </div>
 
-        <!-- Card Body -->
         <div class="p-4 flex items-start gap-3">
-          <span class="text-xl leading-none select-none">{userMeta.passed ? '✨' : '💡'}</span>
-          <p class="leading-relaxed font-medium">{userMeta.feedbackText}</p>
+          <span class="text-xl leading-none select-none">{userMeta?.passed ? '✨' : '💡'}</span>
+          <p class="leading-relaxed font-medium">{userMeta?.feedbackText}</p>
         </div>
       </div>
     {/if}
+    -->
   </div>
 </li>
 

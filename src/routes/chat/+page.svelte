@@ -55,14 +55,7 @@
           }
 
           case 'teacher': {
-            const userMessage = messages.find(({ id }) => id === messageId);
-            if (userMessage && userMessage.role === 'user') {
-              userMessage.metadata.status = 'done';
-              userMessage.metadata.feedbackText = object.text;
-              userMessage.metadata.passed = object.passed;
-            }
-
-            if (object.passed) nextTurn();
+            // TODO - irrelevant for now
             break;
           }
         }
@@ -126,26 +119,18 @@
     event.preventDefault();
     clearAnimation();
 
-    const { slugline, character, beat, position } = play;
+    const position = play.position;
 
     const userMessage: GaboUIMessage = {
       id: globalThis.crypto.randomUUID(),
       parts: [{ type: 'text', text: chatInput }],
       role: 'user',
-      metadata: { position, status: 'pending' },
+      metadata: { position, status: 'done' },
     };
 
     messages.push(userMessage);
 
-    createStructuredObject(userMessage.id, 'teacher', {
-      language: 'French',
-      input: chatInput,
-      slugline,
-      role: character.role,
-      actions: beat.actions,
-      interlocutors: play.others.map(({ role }) => role),
-      dialogue: convertToDialogue(messages, play),
-    });
+    nextTurn();
 
     chatInput = '';
   }
@@ -153,13 +138,8 @@
   $effect(() => {
     if (animatedMessage === undefined) return;
 
-    let text = '';
-    if (animatedMessage.role === 'user') {
-      text = animatedMessage.metadata.feedbackText ?? '';
-    } else {
-      const lastPart = animatedMessage.parts.at(-1);
-      text = lastPart?.type === 'text' ? lastPart.text : '';
-    }
+    const lastPart = animatedMessage.parts.at(-1);
+    const text = animatedMessage.role === 'user' ? (animatedMessage.metadata.feedbackText ?? '') : lastPart?.type === 'text' ? lastPart.text : '';
 
     if (animatedMessageLength < text.length) {
       const timeout = globalThis.setTimeout(() => animatedMessageLength++, 30);
