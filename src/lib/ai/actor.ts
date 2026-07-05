@@ -53,6 +53,7 @@ export async function runActorAgent({ actions, dialogue, interlocutors, language
 export function convertToDialogue(messages: Array<GaboUIMessage>, play: Play) {
   return messages
     .filter(({ role, metadata }) => role === "user" || metadata?.agent === "actor")
+    .filter(({ metadata }) => metadata.status === 'done')
     .filter(({ parts }) => parts.some((part) => part.type === "text"))
     .map(({ parts, metadata }) => {
       const textPart = parts.find((part) => part.type === "text")!;
