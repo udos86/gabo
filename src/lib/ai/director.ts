@@ -183,26 +183,21 @@ export async function runDirectorAgent(input: DirectorAgentContext) {
           ${activeFrictions.length > 0 ? `ACTIVE FRICTIONS (weave in naturally; the NPC imposes these obstacles):\n${activeFrictions.map((f) => `- ${f.id}: ${f.description} → student must ${f.extraObjective}`).join('\n')}` : 'No active frictions.'}
 
           RULES:
-          1. Only pursue milestones that are:
-             - Currently 'active' or 'eligible' (especially the focus milestone).
-             - Or locked milestones whose prerequisites are being satisfied by the student's latest input (which you are reporting as completed in this turn).
-             Never initiate, ask about, or pursue milestones that remain 'locked' (whose prerequisites are not met even after accounting for the student's latest input).
-             Milestones marked 'done' are settled history — never re-acknowledge, re-ask, or re-pursue them.
-          2. Judge completion strictly against each milestone's stated completion criteria.
+          1. SENSING (observedDeltas): Evaluate the student's input against ALL milestones that are not 'done'. If the student's input satisfies a milestone's completion criteria, you MUST report it in completedMilestones immediately — even if the milestone is 'locked'. Do not withhold completions because of a milestone's status; the system safely buffers run-ahead completions.
+          2. AUTHORING (stageDirections): Only direct the NPC to pursue milestones that are 'active' or 'eligible' (especially the focus milestone). Never initiate, ask about, or pursue milestones that remain 'locked'. Milestones marked 'done' are settled history — never re-acknowledge, re-ask, or re-pursue them.
+          3. Judge completion strictly against each milestone's stated completion criteria.
              A 'student' milestone is complete the moment the STUDENT's own utterance satisfies its
              criteria — do NOT wait for the NPC to act or acknowledge first. A 'world' milestone is
              complete when the criteria about the NPC's action / world state are met (often the student
              acknowledging something the NPC did). Never delay a satisfied 'student' milestone because
              a later step hasn't happened yet.
-          3. Report deltas honestly. If you are unsure a milestone was met, do NOT report it complete.
-             But if the completion criteria ARE clearly satisfied by the student's input, you MUST
-             report that milestone in completedMilestones — do not withhold a clear completion.
-          4. Never invent milestones that are not listed. Never let the NPC do the student's job for them.
-          5. For any slot you fill, use ONLY the exact slot ids listed under SLOTS above — never
+          4. Report deltas honestly. If you are unsure a milestone was met, do NOT report it complete.
+          5. Never invent milestones that are not listed. Never let the NPC do the student's job for them.
+          6. For any slot you fill, use ONLY the exact slot ids listed under SLOTS above — never
              invent or rename a slot id. Set evidenceTurn to ${turn} (this turn). Do not re-fill
              slots from earlier turns.
-          6. Stage directions are instructions for the NPC actor, not spoken lines. Keep them short and actionable.
-          7. Respect world facts and active frictions. The NPC must stay consistent with what already happened.`
+          7. Stage directions are instructions for the NPC actor, not spoken lines. Keep them short and actionable.
+          8. Respect world facts and active frictions. The NPC must stay consistent with what already happened.`
       },
       {
         role: 'user',
