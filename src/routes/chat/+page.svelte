@@ -4,8 +4,10 @@
   import { Experimental_StructuredObject, type UIMessage } from '@ai-sdk/svelte';
 
   import { convertToDialogue } from '$lib/ai/actor';
-  import { agentOutputSchema, type AgentInput, type AgentName, type AssistantMessageMetadata, type GaboUIMessage } from '$lib/ai/schema';
-  import { Play } from '$lib/screenplay/screenplay';
+  import { buildDirectorInput } from '$lib/ai/director';
+  import { actorOutputSchema, type AssistantMessageMetadata, type GaboUIMessage, type UserMessageMetadata } from '$lib/ai/schema';
+  import { createInitialState, reduce } from '$lib/scenario/reducer';
+  import { directorOutputSchema, type LessonState } from '$lib/scenario/state';
   import { Resolver } from '$lib/utils/resolver';
 
   import type { PageProps } from './$types';
@@ -15,58 +17,101 @@
 
   let { data }: PageProps = $props();
 
+  const scenario = $derived(data.scenario);
+
   let messages = $state<Array<GaboUIMessage>>([]);
+  let lessonState = $state<LessonState | null>(null);
   let chatInput = $state('');
   let chatElement = $state<HTMLElement | null>(null);
-  let play = $derived(new Play({ screenplay: data.screenplay }));
 
   let animatedMessage = $derived(messages.find((message) => message.metadata?.status === 'animating'));
   let animatedMessageLength = $state(0);
   let isAnimating = $derived(animatedMessage !== undefined);
 
   let animationResolver: Resolver<void> | null = null;
-  let structuredObjects = new SvelteMap<string, Experimental_StructuredObject<typeof agentOutputSchema>>();
+  let structuredObjects = new SvelteMap<string, Experimental_StructuredObject<typeof actorOutputSchema>>();
 
-  function createStructuredObject(messageId: string, agent: AgentName, input: AgentInput) {
-    const object = new Experimental_StructuredObject({
-      api: `/api/agent/${agent}`,
-      schema: agentOutputSchema,
+  const isFinished = $derived(lessonState !== null && lessonState.status !== 'in_progress');
+
+  function interlocutorRoles(excludeCharacterId: string) {
+    return Object.values(scenario.characters)
+      .filter((character) => character.id !== excludeCharacterId)
+      .map((character) => character.role);
+  }
+
+  /** The hidden Director senses milestone deltas and authors the NPC's next stage directions. */
+  function runDirectorTurn(studentInput: string) {
+    if (lessonState === null) return;
+
+    const dialogue = convertToDialogue(messages, scenario.characters);
+    const input = buildDirectorInput(scenario, lessonState, dialogue, studentInput);
+
+    const director = new Experimental_StructuredObject({
+      api: '/api/agent/director',
+      schema: directorOutputSchema,
       onFinish: async ({ object }) => {
-        if (object == undefined) return;
-        await animationResolver;
+        if (object === undefined || lessonState === null) return;
 
-        switch (object.agent) {
-          case 'actor': {
-            const parts: UIMessage['parts'] = [{ type: 'text', text: object.text }];
-            const metadata: AssistantMessageMetadata = { agent: object.agent, position: play.position, status: 'ready' };
-            const pendingMessage = messages.find(({ id, metadata }) => id === messageId && metadata?.status === 'pending');
-
-            if (pendingMessage === undefined) {
-              const message: GaboUIMessage = { id: messageId, parts, role: 'assistant', metadata };
-              messages.push(message);
-            } else {
-              pendingMessage.parts = parts;
-              pendingMessage.metadata = metadata;
-            }
-
-            scheduleNextMessageAnimation();
-            nextTurn();
-            break;
-          }
-
-          case 'teacher': {
-            // TODO - irrelevant for now
-            break;
-          }
-        }
-
-        structuredObjects.delete(messageId);
-      },
+        // The reducer is the sole authority: it validates the Director's proposals.
+        lessonState = reduce(lessonState, scenario, object);
+        runActorTurn(object.stageDirections);
+      }
     });
 
-    structuredObjects.set(messageId, object);
+    director.submit(input);
+  }
 
-    object.submit(input);
+  /** The Actor improvises the NPC's spoken line from the Director's stage directions. */
+  function runActorTurn(stageDirections: Array<string>) {
+    if (lessonState === null) return;
+
+    const npc = scenario.characters[scenario.npcCharacterId];
+    if (npc === undefined) return;
+
+    const messageId = globalThis.crypto.randomUUID();
+    const pending: GaboUIMessage = {
+      id: messageId,
+      parts: [{ type: 'text', text: '' }],
+      role: 'assistant',
+      metadata: { agent: 'actor', characterId: npc.id, status: 'pending' }
+    };
+    messages.push(pending);
+
+    const actor = new Experimental_StructuredObject({
+      api: '/api/agent/actor',
+      schema: actorOutputSchema,
+      onFinish: async ({ object }) => {
+        if (object === undefined) return;
+        await animationResolver;
+
+        const parts: UIMessage['parts'] = [{ type: 'text', text: object.text }];
+        const metadata: AssistantMessageMetadata = { agent: 'actor', characterId: npc.id, status: 'ready' };
+        const pendingMessage = messages.find(({ id, metadata }) => id === messageId && metadata?.status === 'pending');
+
+        if (pendingMessage === undefined) {
+          messages.push({ id: messageId, parts, role: 'assistant', metadata });
+        } else {
+          pendingMessage.parts = parts;
+          pendingMessage.metadata = metadata;
+        }
+
+        scheduleNextMessageAnimation();
+        structuredObjects.delete(messageId);
+      }
+    });
+
+    structuredObjects.set(messageId, actor);
+
+    actor.submit({
+      language: scenario.language,
+      slugline: scenario.setting.slugline,
+      role: npc.role,
+      actions: stageDirections,
+      interlocutors: interlocutorRoles(npc.id),
+      dialogue: convertToDialogue(messages, scenario.characters),
+      worldFacts: lessonState.worldFacts,
+      variables: lessonState.variables
+    });
   }
 
   async function scheduleNextMessageAnimation() {
@@ -89,50 +134,25 @@
     animatedMessageLength = 0;
   }
 
-  function nextTurn() {
-    const done = play.next();
-    if (done) return;
-    const { beat, character, position, slugline } = play;
-
-    if (character.actor === 'assistant') {
-      const actorMessage: GaboUIMessage = {
-        id: globalThis.crypto.randomUUID(),
-        parts: [{ type: 'text', text: '' }],
-        role: 'assistant',
-        metadata: { agent: 'actor', position, status: 'pending' },
-      };
-
-      messages.push(actorMessage);
-
-      createStructuredObject(actorMessage.id, 'actor', {
-        language: 'French',
-        slugline,
-        role: character.role,
-        actions: beat.actions,
-        interlocutors: play.others.map(({ role }) => role),
-        dialogue: convertToDialogue(messages, play),
-      });
-    }
-  }
-
   function onSubmit(event: Event) {
     event.preventDefault();
     clearAnimation();
 
-    const position = play.position;
+    if (lessonState === null || isFinished || chatInput.trim() === '') return;
 
     const userMessage: GaboUIMessage = {
       id: globalThis.crypto.randomUUID(),
       parts: [{ type: 'text', text: chatInput }],
       role: 'user',
-      metadata: { position, status: 'done' },
+      metadata: { characterId: scenario.playerCharacterId, status: 'done' } satisfies UserMessageMetadata
     };
 
     messages.push(userMessage);
 
-    nextTurn();
-
+    const studentInput = chatInput;
     chatInput = '';
+
+    runDirectorTurn(studentInput);
   }
 
   $effect(() => {
@@ -155,7 +175,11 @@
     chatElement?.scroll({ behavior: 'smooth', top: chatElement.scrollHeight });
   });
 
-  onMount(() => nextTurn());
+  onMount(() => {
+    lessonState = createInitialState(scenario);
+    // Opening turn: the Director authors the NPC's first line with no student input yet.
+    runDirectorTurn('');
+  });
 </script>
 
 <ul class="grow overflow-y-auto pt-8 scroll-smooth" bind:this={chatElement}>
@@ -166,4 +190,4 @@
   {/each}
 </ul>
 
-<ChatInput bind:value={chatInput} onSubmit={(event) => onSubmit(event)} />
+<ChatInput bind:value={chatInput} disabled={isFinished} onSubmit={(event) => onSubmit(event)} />

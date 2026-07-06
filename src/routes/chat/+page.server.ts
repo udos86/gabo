@@ -1,11 +1,11 @@
-import type { Screenplay } from '$lib/screenplay/screenplay';
+import { scenarioSchema, type Scenario } from '$lib/scenario/scenario';
 
 import type { PageServerLoad } from './$types';
 
-import lesson001 from '$lib/lessons/lesson-001.json' with { type: 'json' };
+import cafe001 from '$lib/lessons/cafe-001.json' with { type: 'json' };
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async () => {
   return {
-    screenplay: lesson001 as Screenplay
-  }
+    scenario: scenarioSchema.parse(cafe001) satisfies Scenario
+  };
 };

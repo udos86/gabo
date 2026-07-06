@@ -1,9 +1,11 @@
 import { Output, streamText } from "ai";
 
 import { actorOutputSchema, type ActorAgentContext, type GaboUIMessage } from "$lib/ai/schema";
-import type { Play } from "$lib/screenplay/screenplay";
 
-export async function runActorAgent({ actions, dialogue, interlocutors, language, model, role, slugline }: ActorAgentContext) {
+export async function runActorAgent({ actions, dialogue, interlocutors, language, model, role, slugline, worldFacts = {}, variables = {} }: ActorAgentContext) {
+  const hasWorldFacts = Object.keys(worldFacts).length > 0;
+  const hasVariables = Object.keys(variables).length > 0;
+
   return streamText({
     model,
     messages: [
@@ -16,6 +18,8 @@ export async function runActorAgent({ actions, dialogue, interlocutors, language
           - Language: ${language}
           - Scene slugline: ${slugline}
           - Interlocutors: ${interlocutors.map(({ name, description, gender }) => `${name} (${description}, gender: ${gender})`).join(', ')}
+          ${hasVariables ? `- Scene colour (reflect this in tone, do not state it explicitly): ${JSON.stringify(variables)}` : ''}
+          ${hasWorldFacts ? `- Established world facts (already true — NEVER contradict or repeat as if new): ${JSON.stringify(worldFacts)}` : ''}
 
           YOUR RULES:
           1. Use the <dialogue-history> provided in the user message to maintain continuity.
@@ -28,6 +32,7 @@ export async function runActorAgent({ actions, dialogue, interlocutors, language
           8. Output ONLY the dialogue text. 
           9. Do NOT include your character's name, parentheticals (like "(angrily)"), or stage directions.
           10. Pay close attention to gender-specific language (pronouns, terms of address like 'Monsieur'/'Madame', and grammatical agreement) based on your gender (${role.gender}) and the gender of your interlocutors.
+          11. Never contradict an established world fact, and never perform or announce an action that a world fact says already happened.
 
           You are now in character.`
       },
@@ -50,16 +55,16 @@ export async function runActorAgent({ actions, dialogue, interlocutors, language
 
 }
 
-export function convertToDialogue(messages: Array<GaboUIMessage>, play: Play) {
+export function convertToDialogue(messages: Array<GaboUIMessage>, characters: Record<string, { role: { name: string } }>) {
   return messages
     .filter(({ role, metadata }) => role === "user" || metadata?.agent === "actor")
     .filter(({ metadata }) => metadata.status === 'done')
     .filter(({ parts }) => parts.some((part) => part.type === "text"))
     .map(({ parts, metadata }) => {
       const textPart = parts.find((part) => part.type === "text")!;
-      const character = play.getCharacterAtPosition(metadata!.position);
-      return { text: textPart.text, character };
+      const character = characters[metadata!.characterId];
+      const name = character?.role.name ?? metadata!.characterId;
+      return `${name}: ${textPart.text}`;
     })
-    .map(({ text, character }) => `${character.role.name}: ${text}`)
     .join('\n');
 }

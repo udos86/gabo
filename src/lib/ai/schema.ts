@@ -7,13 +7,19 @@ export const characterRoleSchema = z.object({
   gender: z.enum(['male', 'female', 'diverse'])
 });
 
+export type CharacterRoleInput = z.infer<typeof characterRoleSchema>;
+
 export const actorInputSchema = z.object({
   actions: z.array(z.string()),
   dialogue: z.string(),
   interlocutors: z.array(characterRoleSchema),
   language: z.string(),
   role: characterRoleSchema,
-  slugline: z.string()
+  slugline: z.string(),
+  /** Facts already true in the world; the Actor must never contradict them. */
+  worldFacts: z.record(z.string(), z.union([z.boolean(), z.string()])).optional(),
+  /** Per-run variables (e.g. waiter mood) that colour the Actor's delivery. */
+  variables: z.record(z.string(), z.string()).optional()
 });
 
 export type AgentContext = { model: LanguageModel };
@@ -59,7 +65,7 @@ export const agentOutputSchema = z.discriminatedUnion('agent', [
 export type AgentOutput = z.infer<typeof agentOutputSchema>;
 
 export const messageMetadataSchema = z.object({
-  position: z.tuple([z.number(), z.number()]),
+  characterId: z.string(),
   status: z.enum(['pending', 'ready', 'animating', 'done'])
 });
 

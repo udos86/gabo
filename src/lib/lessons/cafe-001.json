@@ -1,0 +1,106 @@
+{
+  "id": "cafe-001",
+  "language": "French",
+  "setting": {
+    "slugline": "INT. A BUSY PARISIAN CAFÉ - MORNING",
+    "description": "A busy Parisian café on an autumn morning. Waiters move between tables; the smell of coffee and warm pastries fills the air."
+  },
+  "goal": "Enter the café, get a table, and order something to eat and drink.",
+  "slack": 1.5,
+  "characters": {
+    "waiter": {
+      "id": "waiter",
+      "actor": "assistant",
+      "role": {
+        "name": "Waiter",
+        "description": "a professional waiter whose goal is to seat guests and take their orders",
+        "gender": "male"
+      },
+      "avatarUrl": "/waiter.png"
+    },
+    "tourist": {
+      "id": "tourist",
+      "actor": "user",
+      "role": {
+        "name": "Tourist",
+        "description": "a shy foreign tourist who would like to have something to eat and drink",
+        "gender": "male"
+      },
+      "avatarUrl": "/tourist.png"
+    }
+  },
+  "playerCharacterId": "tourist",
+  "npcCharacterId": "waiter",
+  "milestones": [
+    {
+      "id": "greet",
+      "objective": "exchange greetings with the waiter",
+      "kind": "student",
+      "prerequisites": [],
+      "rubric": "The student produces an appropriate, polite greeting (e.g. 'Bonjour').",
+      "fillsSlots": []
+    },
+    {
+      "id": "request_table",
+      "objective": "ask the waiter for a table",
+      "kind": "student",
+      "prerequisites": ["greet"],
+      "rubric": "The student asks for a table and makes the party size clear (e.g. a table for one).",
+      "fillsSlots": ["party_size"]
+    },
+    {
+      "id": "choose_location",
+      "objective": "state a seating preference (inside or outside)",
+      "kind": "student",
+      "prerequisites": ["request_table"],
+      "rubric": "The student expresses a clear preference to sit inside or outside.",
+      "fillsSlots": ["seating_preference"]
+    },
+    {
+      "id": "get_seated",
+      "objective": "the waiter seats the guest and brings the menu",
+      "kind": "world",
+      "prerequisites": ["choose_location"],
+      "rubric": "The student acknowledges being seated and receiving the menu (e.g. thanks the waiter).",
+      "fillsSlots": []
+    },
+    {
+      "id": "order",
+      "objective": "order food and a drink from the menu",
+      "kind": "student",
+      "prerequisites": ["get_seated"],
+      "rubric": "The student orders at least one food item and one drink using polite phrasing (e.g. 'je voudrais…').",
+      "fillsSlots": ["food_order", "drink_order"]
+    },
+    {
+      "id": "smalltalk",
+      "objective": "make brief small talk about the weather or the café",
+      "kind": "student",
+      "prerequisites": ["greet"],
+      "rubric": "The student makes a short, natural remark about the weather, the autumn colours, or the café.",
+      "fillsSlots": [],
+      "optional": true
+    }
+  ],
+  "slots": [
+    { "id": "party_size", "description": "how many people the table is for" },
+    { "id": "seating_preference", "description": "inside or outside" },
+    { "id": "food_order", "description": "the food item the guest ordered" },
+    { "id": "drink_order", "description": "the drink the guest ordered" }
+  ],
+  "frictions": [
+    {
+      "id": "terrace_full",
+      "attachesTo": "choose_location",
+      "description": "the outdoor terrace is completely full this morning",
+      "extraObjective": "accept a table inside instead, or politely ask to wait",
+      "rubric": "The student adapts to the terrace being full by accepting an inside table or asking to wait.",
+      "probability": 0.5,
+      "avgTurnCost": 2
+    }
+  ],
+  "variableSpec": {
+    "waiter_mood": ["cheerful and chatty", "brisk and efficient", "warm and grandfatherly"],
+    "cafe_busyness": ["packed and noisy", "pleasantly busy", "quiet and calm"]
+  }
+}
