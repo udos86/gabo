@@ -83,8 +83,8 @@ export async function POST({ request }: { request: Request }) {
 
     const model = openai(ACTOR_MODEL);
     const body = await request.json();
-    const { dialogue, interlocutors, language, role, slugline, stageDirections } = body as ActorAgentContext;
-    result = await runActorAgent({ dialogue, interlocutors, language, model, role, slugline, stageDirections });
+    const { dialogue, interlocutors, language, role, slugline, stageDirections, variables, worldFacts } = body as ActorAgentContext;
+    result = await runActorAgent({ dialogue, interlocutors, language, model, role, slugline, stageDirections, variables, worldFacts });
   }
 
   if (result === undefined) return new Response("Invalid agent type", { status: 400 });

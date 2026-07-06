@@ -44,23 +44,33 @@
       "id": "request_table",
       "objective": "ask the waiter for a table",
       "kind": "student",
-      "prerequisites": ["greet"],
+      "prerequisites": [
+        "greet"
+      ],
       "rubric": "The student asks for a table and makes the party size clear (e.g. a table for one).",
-      "fillsSlots": ["party_size"]
+      "fillsSlots": [
+        "party_size"
+      ]
     },
     {
       "id": "choose_location",
       "objective": "state a seating preference (inside or outside)",
       "kind": "student",
-      "prerequisites": ["request_table"],
+      "prerequisites": [
+        "request_table"
+      ],
       "rubric": "The student expresses a clear preference to sit inside or outside.",
-      "fillsSlots": ["seating_preference"]
+      "fillsSlots": [
+        "seating_preference"
+      ]
     },
     {
       "id": "get_seated",
       "objective": "the waiter seats the guest and brings the menu",
       "kind": "world",
-      "prerequisites": ["choose_location"],
+      "prerequisites": [
+        "choose_location"
+      ],
       "rubric": "The student acknowledges being seated and receiving the menu (e.g. thanks the waiter).",
       "fillsSlots": []
     },
@@ -68,25 +78,44 @@
       "id": "order",
       "objective": "order food and a drink from the menu",
       "kind": "student",
-      "prerequisites": ["get_seated"],
+      "prerequisites": [
+        "get_seated"
+      ],
       "rubric": "The student orders at least one food item and one drink using polite phrasing (e.g. 'je voudrais…').",
-      "fillsSlots": ["food_order", "drink_order"]
+      "fillsSlots": [
+        "food_order",
+        "drink_order"
+      ]
     },
     {
       "id": "smalltalk",
       "objective": "make brief small talk about the weather or the café",
       "kind": "student",
-      "prerequisites": ["greet"],
+      "prerequisites": [
+        "greet"
+      ],
       "rubric": "The student makes a short, natural remark about the weather, the autumn colours, or the café.",
       "fillsSlots": [],
       "optional": true
     }
   ],
   "slots": [
-    { "id": "party_size", "description": "how many people the table is for" },
-    { "id": "seating_preference", "description": "inside or outside" },
-    { "id": "food_order", "description": "the food item the guest ordered" },
-    { "id": "drink_order", "description": "the drink the guest ordered" }
+    {
+      "id": "party_size",
+      "description": "how many people the table is for"
+    },
+    {
+      "id": "seating_preference",
+      "description": "inside or outside"
+    },
+    {
+      "id": "food_order",
+      "description": "the food item the guest ordered"
+    },
+    {
+      "id": "drink_order",
+      "description": "the drink the guest ordered"
+    }
   ],
   "frictions": [
     {
@@ -100,7 +129,16 @@
     }
   ],
   "variableSpec": {
-    "waiter_mood": ["cheerful and chatty", "brisk and efficient", "warm and grandfatherly"],
-    "cafe_busyness": ["packed and noisy", "pleasantly busy", "quiet and calm"]
+    "waiter_mood": [
+      "elegant and reserved",
+      "cheerful and chatty",
+      "brisk and efficient",
+      "warm and grandfatherly"
+    ],
+    "cafe_busyness": [
+      "packed and noisy",
+      "pleasantly busy",
+      "quiet and calm"
+    ]
   }
 }
