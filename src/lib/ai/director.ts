@@ -183,8 +183,11 @@ export async function runDirectorAgent(input: DirectorAgentContext) {
           ${activeFrictions.length > 0 ? `ACTIVE FRICTIONS (weave in naturally; the NPC imposes these obstacles):\n${activeFrictions.map((f) => `- ${f.id}: ${f.description} → student must ${f.extraObjective}`).join('\n')}` : 'No active frictions.'}
 
           RULES:
-          1. Only pursue milestones that are NOT 'done'. Milestones marked 'done' are settled history —
-             never re-acknowledge, re-ask, or re-pursue them.
+          1. Only pursue milestones that are:
+             - Currently 'active' or 'eligible' (especially the focus milestone).
+             - Or locked milestones whose prerequisites are being satisfied by the student's latest input (which you are reporting as completed in this turn).
+             Never initiate, ask about, or pursue milestones that remain 'locked' (whose prerequisites are not met even after accounting for the student's latest input).
+             Milestones marked 'done' are settled history — never re-acknowledge, re-ask, or re-pursue them.
           2. Judge completion strictly against each milestone's stated completion criteria.
              A 'student' milestone is complete the moment the STUDENT's own utterance satisfies its
              criteria — do NOT wait for the NPC to act or acknowledge first. A 'world' milestone is
