@@ -10,11 +10,11 @@ export const characterRoleSchema = z.object({
 export type CharacterRoleInput = z.infer<typeof characterRoleSchema>;
 
 export const actorInputSchema = z.object({
-  actions: z.array(z.string()),
   dialogue: z.string(),
   interlocutors: z.array(characterRoleSchema),
   language: z.string(),
   role: characterRoleSchema,
+  stageDirections: z.array(z.string()),
   slugline: z.string(),
   /** Facts already true in the world; the Actor must never contradict them. */
   worldFacts: z.record(z.string(), z.union([z.boolean(), z.string()])).optional(),

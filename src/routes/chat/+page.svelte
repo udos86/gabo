@@ -55,7 +55,7 @@
         // The reducer is the sole authority: it validates the Director's proposals.
         lessonState = reduce(lessonState, scenario, object);
         runActorTurn(object.stageDirections);
-      }
+      },
     });
 
     director.submit(input);
@@ -73,7 +73,7 @@
       id: messageId,
       parts: [{ type: 'text', text: '' }],
       role: 'assistant',
-      metadata: { agent: 'actor', characterId: npc.id, status: 'pending' }
+      metadata: { agent: 'actor', characterId: npc.id, status: 'pending' },
     };
     messages.push(pending);
 
@@ -97,7 +97,7 @@
 
         scheduleNextMessageAnimation();
         structuredObjects.delete(messageId);
-      }
+      },
     });
 
     structuredObjects.set(messageId, actor);
@@ -106,11 +106,11 @@
       language: scenario.language,
       slugline: scenario.setting.slugline,
       role: npc.role,
-      actions: stageDirections,
+      stageDirections,
       interlocutors: interlocutorRoles(npc.id),
       dialogue: convertToDialogue(messages, scenario.characters),
       worldFacts: lessonState.worldFacts,
-      variables: lessonState.variables
+      variables: lessonState.variables,
     });
   }
 
@@ -144,7 +144,7 @@
       id: globalThis.crypto.randomUUID(),
       parts: [{ type: 'text', text: chatInput }],
       role: 'user',
-      metadata: { characterId: scenario.playerCharacterId, status: 'done' } satisfies UserMessageMetadata
+      metadata: { characterId: scenario.playerCharacterId, status: 'done' } satisfies UserMessageMetadata,
     };
 
     messages.push(userMessage);

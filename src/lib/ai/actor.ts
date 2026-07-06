@@ -2,7 +2,7 @@ import { Output, streamText } from "ai";
 
 import { actorOutputSchema, type ActorAgentContext, type GaboUIMessage } from "$lib/ai/schema";
 
-export async function runActorAgent({ actions, dialogue, interlocutors, language, model, role, slugline, worldFacts = {}, variables = {} }: ActorAgentContext) {
+export async function runActorAgent({ dialogue, interlocutors, language, model, role, slugline, stageDirections, worldFacts = {}, variables = {} }: ActorAgentContext) {
   const hasWorldFacts = Object.keys(worldFacts).length > 0;
   const hasVariables = Object.keys(variables).length > 0;
 
@@ -23,11 +23,11 @@ export async function runActorAgent({ actions, dialogue, interlocutors, language
 
           YOUR RULES:
           1. Use the <dialogue-history> provided in the user message to maintain continuity.
-          2. Improvise the next line of dialogue based on the <actions> provided.
+          2. Improvise the next line of dialogue based on the <stage-directions> provided.
           3. Match the tone and emotional flow of the existing conversation.
           4. Do not repeat greetings, introductions, or information already established in the <dialogue-history>.
-          5. Always acknowledge the other character's statement or answer their question naturally before moving on to the instructions in the <actions> block. 
-          6. Do not jump straight to the <actions> if the previous line requires a reaction.
+          5. Always acknowledge the other character's statement or answer their question naturally before moving on to the instructions in the <stage-directions> block. 
+          6. Do not jump straight to the <stage-directions> if the previous line requires a reaction.
           7. Maintain the progression of the scene so that every line moves the interaction forward.
           8. Output ONLY the dialogue text. 
           9. Do NOT include your character's name, parentheticals (like "(angrily)"), or stage directions.
@@ -43,9 +43,9 @@ export async function runActorAgent({ actions, dialogue, interlocutors, language
             ${dialogue}
           </dialogue-history>
 
-          <actions>
-            ${actions.length > 0 ? actions.join(', ') : 'Respond naturally to the last speaker and continue the scene.'}
-          </actions>
+          <stage-directions>
+            ${stageDirections.length > 0 ? stageDirections.join(', ') : 'Respond naturally to the last speaker and continue the scene.'}
+          </stage-directions>
 
           ${role.name}:`
       }

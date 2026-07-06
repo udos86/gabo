@@ -17,7 +17,7 @@ export async function POST({ request }) {
   if (message === undefined) throw new Error('No messages provided in request body.');
   if (message.metadata === undefined) throw new Error('Latest message is missing metadata.');
 
-  const { actions, language, slugline, role } = message.metadata as any;
+  const { language, role, slugline, stageDirections } = message.metadata as any;
 
   let result;
 
@@ -27,7 +27,7 @@ export async function POST({ request }) {
       language,
       slugline,
       role,
-      actions,
+      stageDirections,
       dialogue: "",
       interlocutors: []
     });

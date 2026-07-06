@@ -54,7 +54,7 @@ export const directorOutputSchema = z.object({
     resolvedFrictions: z.array(z.string()),
     offTopic: z.boolean()
   }),
-  /** Stage directions handed to the Actor as its `actions[]`. */
+  /** Stage directions handed to the Actor`. */
   stageDirections: z.array(z.string()),
   /**
    * NPC actions performed this turn (e.g. menu_given: true) — folded into
