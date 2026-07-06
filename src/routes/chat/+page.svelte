@@ -14,6 +14,7 @@
 
   import ChatBubble from './ChatBubble.svelte';
   import ChatInput from './ChatInput.svelte';
+  import MilestonesPanel from './MilestonesPanel.svelte';
 
   let { data }: PageProps = $props();
 
@@ -181,6 +182,8 @@
     runDirectorTurn('');
   });
 </script>
+
+<MilestonesPanel milestones={scenario.milestones} statuses={lessonState?.milestones} />
 
 <ul class="grow overflow-y-auto pt-8 scroll-smooth" bind:this={chatElement}>
   {#each messages as message (message.id)}
