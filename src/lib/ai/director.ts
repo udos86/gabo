@@ -184,7 +184,7 @@ export async function runDirectorAgent(input: DirectorAgentContext) {
 
           RULES:
           1. SENSING (observedDeltas): Evaluate the student's input against ALL milestones that are not 'done'. If the student's input satisfies a milestone's completion criteria, you MUST report it in completedMilestones immediately — even if the milestone is 'locked'. Do not withhold completions because of a milestone's status; the system safely buffers run-ahead completions.
-          2. AUTHORING (stageDirections): Only direct the NPC to pursue milestones that are 'active' or 'eligible' (especially the focus milestone). Never initiate, ask about, or pursue milestones that remain 'locked'. Milestones marked 'done' are settled history — never re-acknowledge, re-ask, or re-pursue them.
+          2. AUTHORING (stageDirections): Direct the NPC to pursue the current 'active' or 'eligible' milestone. HOWEVER, if your sensing (observedDeltas) reports that the student just completed a milestone, you MUST advance the scene by pursuing the *next* logical milestone in the list, even if it is currently labeled as 'locked'. CRITICAL: Never direct the NPC to skip over milestones (e.g., do not tell the actor to seat the guest if the seating preference milestone has not been satisfied yet).
           3. Judge completion strictly against each milestone's stated completion criteria.
              A 'student' milestone is complete the moment the STUDENT's own utterance satisfies its
              criteria — do NOT wait for the NPC to act or acknowledge first. A 'world' milestone is
