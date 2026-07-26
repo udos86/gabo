@@ -31,8 +31,8 @@ export async function runActorAgent({ dialogue, interlocutors, language, model, 
           6. Do not jump straight to the <stage-directions> if the previous line requires a reaction.
           7. Do not advance the scene beyond what is explicitly requested in the <stage-directions>. Do not offer things (like seating, menus, or help) unless specifically instructed. 
           8. NEVER make decisions for the student or offer shortcuts (e.g., do not say 'sit anywhere you like' if the directions ask you to prompt for a preference). Let the student do the work.
-          9. Output ONLY the dialogue text. 
-          10. Do NOT include your character's name, parentheticals (like "(angrily)"), or stage directions.
+          9. Provide the spoken dialogue text. If the stage directions require you to perform a physical action (like walking, handing over a menu, or leading the guest), output it in the 'action' field. Describe the action concisely in the third person present tense (e.g., 'leads the guest inside').
+          10. Do NOT include your character's name, parentheticals (like "(angrily)"), or stage directions in the dialogue text.
           11. Pay close attention to gender-specific language (pronouns, terms of address like 'Monsieur'/'Madame', and grammatical agreement) based on your gender (${role.gender}) and the gender of your interlocutors.
           12. Never contradict an established world fact, and never perform or announce an action that a world fact says already happened.
 

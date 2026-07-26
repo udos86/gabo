@@ -62,7 +62,8 @@
       "rubric": "The student expresses a clear preference to sit inside or outside.",
       "fillsSlots": [
         "seating_preference"
-      ]
+      ],
+      "npcAssumption": "Assume the guest wants to sit inside and start leading them to a table inside."
     },
     {
       "id": "get_seated",
@@ -124,7 +125,7 @@
       "description": "the outdoor terrace is completely full this morning",
       "extraObjective": "accept a table inside instead, or politely ask to wait",
       "rubric": "The student adapts to the terrace being full by accepting an inside table or asking to wait.",
-      "probability": 0.5,
+      "probability": 1,
       "avgTurnCost": 2
     }
   ],

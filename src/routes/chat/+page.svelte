@@ -86,7 +86,7 @@
         await animationResolver;
 
         const parts: UIMessage['parts'] = [{ type: 'text', text: object.text }];
-        const metadata: AssistantMessageMetadata = { agent: 'actor', characterId: npc.id, status: 'ready' };
+        const metadata: AssistantMessageMetadata = { agent: 'actor', characterId: npc.id, status: 'ready', action: object.action ?? undefined };
         const pendingMessage = messages.find(({ id, metadata }) => id === messageId && metadata?.status === 'pending');
 
         if (pendingMessage === undefined) {

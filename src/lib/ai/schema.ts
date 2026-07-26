@@ -44,7 +44,8 @@ export type TeacherAgentContext = AgentContext & TeacherAgentInput;
 
 export const actorOutputSchema = z.object({
   agent: z.literal('actor'),
-  text: z.string()
+  text: z.string(),
+  action: z.string().nullable().describe("A physical action or narrative beat the character performs. Null if no action.")
 });
 
 export type ActorOutput = z.infer<typeof actorOutputSchema>;
@@ -75,7 +76,8 @@ export const userMessageMetadataSchema = messageMetadataSchema.extend({
 });
 
 export const actorMessageMetadataSchema = messageMetadataSchema.extend({
-  agent: z.literal('actor')
+  agent: z.literal('actor'),
+  action: z.string().optional()
 });
 
 export type AgentName = 'actor' | 'teacher';

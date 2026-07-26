@@ -148,6 +148,16 @@ export function reduce(
     if ((status === 'eligible' || status === 'active') && prereqsDone(defs, statuses, id)) {
       statuses[id] = 'done';
       attempts[id] = 0;
+      
+      for (const friction of scenario.frictions) {
+        if (friction.attachesTo === id) {
+          const index = activeFrictions.indexOf(friction.id);
+          if (index !== -1) {
+            activeFrictions.splice(index, 1);
+            if (!resolvedFrictions.includes(friction.id)) resolvedFrictions.push(friction.id);
+          }
+        }
+      }
       return true;
     }
     return false; // prereqs unmet -> caller may buffer

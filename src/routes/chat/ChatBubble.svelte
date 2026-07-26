@@ -23,6 +23,7 @@
   const isUser = $derived(message.role === 'user');
   const userMeta = $derived(message.role === 'user' ? (message.metadata as UserMessageMetadata) : undefined);
   const isAssistant = $derived(message.role === 'assistant');
+  const assistantMeta = $derived(message.role === 'assistant' ? (message.metadata as import('$lib/ai/schema').AssistantMessageMetadata) : undefined);
   const avatarSrc = $derived(message.role === 'assistant' && message.metadata.agent === 'actor' ? '/waiter.png' : '/teacher.png');
 
   const bubbleClass = $derived.by(() => {
@@ -78,6 +79,11 @@
 
     {#if (isAssistant && (message.metadata?.status === 'animating' || message.metadata?.status === 'done')) || isUser}
       <div class="flex-1 flex flex-col min-w-0">
+        {#if isAssistant && assistantMeta?.action}
+          <div class="text-sm italic text-slate-500 mb-2 pl-2">
+            *{assistantMeta.action}*
+          </div>
+        {/if}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div

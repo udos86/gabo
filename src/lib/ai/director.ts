@@ -12,6 +12,7 @@ export interface DirectorMilestoneView {
   status: string;
   optional: boolean;
   fillsSlots: string[];
+  npcAssumption?: string;
 }
 
 export interface DirectorSlotView {
@@ -59,8 +60,8 @@ function effectiveRubric(
     (friction) => friction.attachesTo === milestone.id && activeFrictionIds.includes(friction.id)
   );
   if (attached.length === 0) return milestone.rubric;
-  const extra = attached.map((friction) => friction.extraObjective).join('; ');
-  return `${milestone.rubric} (complicated by: ${extra})`;
+  const extra = attached.map((friction) => friction.extraObjective).join(' AND ');
+  return `To complete this milestone, the student MUST ${extra}. If they have not done this yet, it is INCOMPLETE. Do NOT mark as completed until they fulfill this requirement. (Original goal: ${milestone.rubric})`;
 }
 
 /**
@@ -88,7 +89,8 @@ export function buildDirectorInput(
     effectiveRubric: effectiveRubric(milestone, scenario.frictions, state.activeFrictions),
     status: state.milestones[milestone.id] ?? 'locked',
     optional: milestone.optional,
-    fillsSlots: milestone.fillsSlots
+    fillsSlots: milestone.fillsSlots,
+    npcAssumption: milestone.npcAssumption
   }));
 
   const slots: DirectorSlotView[] = scenario.slots.map((slot) => ({
@@ -174,7 +176,7 @@ export async function runDirectorAgent(input: DirectorAgentContext) {
           - Current turn ${turn} of ${maxTurns}. Directing mode: ${mode}. ${MODE_GUIDANCE[mode]}
 
           MILESTONES (authoritative status — obey it):
-          ${milestones.map((m) => `- [${m.status}]${m.optional ? ' (optional)' : ''} ${m.id} (${m.kind}): ${m.objective} — completion: ${m.effectiveRubric}${m.fillsSlots.length > 0 ? ` — fills slots: ${m.fillsSlots.join(', ')}` : ''}`).join('\n')}
+          ${milestones.map((m) => `- [${m.status}]${m.optional ? ' (optional)' : ''} ${m.id} (${m.kind}): ${m.objective} — completion: ${m.effectiveRubric}${m.fillsSlots.length > 0 ? ` — fills slots: ${m.fillsSlots.join(', ')}` : ''}${m.npcAssumption ? ` — npcAssumption: ${m.npcAssumption}` : ''}`).join('\n')}
           Focus milestone: ${focusMilestoneId ?? 'none'}.
 
           SLOTS (facts to capture from the student when mentioned — use these EXACT ids):
@@ -184,7 +186,7 @@ export async function runDirectorAgent(input: DirectorAgentContext) {
 
           RULES:
           1. SENSING (observedDeltas): Evaluate the student's input against ALL milestones that are not 'done'. If the student's input satisfies a milestone's completion criteria, you MUST report it in completedMilestones immediately — even if the milestone is 'locked'. Do not withhold completions because of a milestone's status; the system safely buffers run-ahead completions.
-          2. AUTHORING (stageDirections): Direct the NPC to pursue the current 'active' or 'eligible' milestone. HOWEVER, if your sensing (observedDeltas) reports that the student just completed a milestone, you MUST advance the scene by pursuing the *next* logical milestone in the list, even if it is currently labeled as 'locked'. CRITICAL: Never direct the NPC to skip over milestones (e.g., do not tell the actor to seat the guest if the seating preference milestone has not been satisfied yet).
+          2. AUTHORING (stageDirections): Direct the NPC to pursue the current 'active' or 'eligible' milestone. HOWEVER, if your sensing (observedDeltas) reports that the student just completed a milestone, you MUST advance the scene by pursuing the *next* logical milestone in the list, even if it is currently labeled as 'locked'. CRITICAL: Never direct the NPC to skip over uncompleted milestones. If the current milestone requires the student to provide information (e.g. seating preference), DO NOT skip it. If the milestone provides an 'npcAssumption', direct the NPC to act on that assumption INITIALLY. If the student contradicts or corrects the assumption, the NPC must adapt naturally and NOT repeat the assumption.
           3. Judge completion strictly against each milestone's stated completion criteria.
              A 'student' milestone is complete the moment the STUDENT's own utterance satisfies its
              criteria — do NOT wait for the NPC to act or acknowledge first. A 'world' milestone is
@@ -196,7 +198,7 @@ export async function runDirectorAgent(input: DirectorAgentContext) {
           6. For any slot you fill, use ONLY the exact slot ids listed under SLOTS above — never
              invent or rename a slot id. Set evidenceTurn to ${turn} (this turn). Do not re-fill
              slots from earlier turns.
-          7. Stage directions are instructions for the NPC actor, not spoken lines. Keep them short and actionable.
+          7. Stage directions are instructions for the NPC actor, not spoken lines. Keep them short and actionable. If the targeted milestone is a 'student' milestone, the stage direction MUST instruct the NPC to elicit the required information, UNLESS there is an 'npcAssumption'. If there is an 'npcAssumption', direct the NPC to act on it the FIRST time. If the student pushes back, adapt and do not repeat the assumption.
           8. Respect world facts and active frictions. The NPC must stay consistent with what already happened.`
       },
       {
@@ -213,6 +215,11 @@ export async function runDirectorAgent(input: DirectorAgentContext) {
           Sense what the student accomplished and author the NPC's next stage directions.`
       }
     ],
-    output: Output.object({ schema: directorOutputSchema })
+    output: Output.object({ schema: directorOutputSchema }),
+    onFinish: ({ object }) => {
+      import('fs').then(fs => {
+        fs.appendFileSync('scratch-director.log', "DIRECTOR COMPLETED WITH OBJECT:\n" + JSON.stringify(object, null, 2) + "\n\n");
+      });
+    }
   });
 }

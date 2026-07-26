@@ -21,7 +21,8 @@ export const milestoneDefSchema = z.object({
   /** Completion criteria the Director judges against (temperature 0 for stability). */
   rubric: z.string(),
   fillsSlots: z.array(z.string()).default([]),
-  optional: z.boolean().default(false)
+  optional: z.boolean().default(false),
+  npcAssumption: z.string().optional()
 });
 
 export const slotDefSchema = z.object({
@@ -83,6 +84,7 @@ export type Scenario = z.infer<typeof scenarioSchema>;
  */
 export function deriveMaxTurns(scenario: Scenario): number {
   const mandatoryCount = scenario.milestones.filter((milestone) => !milestone.optional).length;
+  // Trigger HMR
   const expectedFrictionCost = scenario.frictions.reduce(
     (total, friction) => total + friction.probability * friction.avgTurnCost,
     0

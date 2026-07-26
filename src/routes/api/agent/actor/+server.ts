@@ -84,6 +84,7 @@ export async function POST({ request }: { request: Request }) {
     const model = openai(ACTOR_MODEL);
     const body = await request.json();
     const { dialogue, interlocutors, language, role, slugline, stageDirections, variables, worldFacts } = body as ActorAgentContext;
+    console.log("ACTOR RECEIVED STAGE DIRECTIONS:", stageDirections);
     result = await runActorAgent({ dialogue, interlocutors, language, model, role, slugline, stageDirections, variables, worldFacts });
   }
 
