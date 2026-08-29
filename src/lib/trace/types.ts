@@ -36,6 +36,11 @@ export interface TraceRequestMeta {
 
 export type WithTraceMeta<T> = T & TraceRequestMeta;
 
+export interface TraceMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
 /**
  * OpenInference / OpenTelemetry aligned LLM call trace
  */
@@ -45,8 +50,7 @@ export interface LLMCallTrace<TInput, TOutput> {
   model: string;
   durationMs: number;
   tokens?: LLMUsage;
-  systemPrompt?: string;
-  prompt?: string;
+  messages: Array<TraceMessage>;
   input: TInput;
   output: TOutput;
   rawOutput?: string;

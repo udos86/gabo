@@ -54,21 +54,27 @@
   });
 </script>
 
-{#snippet promptViewer(key: string, systemPrompt?: string, userPrompt?: string, colorClass = 'text-emerald-400', borderClass = 'border-emerald-900/40')}
-  {#if userPrompt || systemPrompt}
+{#snippet messageViewer(key: string, messages?: Array<{ role: string; content: string }>, colorClass = 'text-emerald-400', borderClass = 'border-emerald-900/40')}
+  {#if messages && messages.length > 0}
     <div>
       <button
         type="button"
         onclick={() => togglePrompt(key)}
         class="text-[10px] {colorClass} hover:opacity-80 underline cursor-pointer"
       >
-        {expandedPrompts[key] ? 'Hide compiled prompt' : 'Show compiled prompt'}
+        {expandedPrompts[key] ? 'Hide input messages' : `Show input messages (${messages.length})`}
       </button>
       {#if expandedPrompts[key]}
-        <pre class="mt-1 p-2 rounded bg-black/50 text-[10px] text-slate-300 overflow-x-auto max-h-48 whitespace-pre-wrap font-mono border {borderClass}">{systemPrompt}
-
---- User Prompt ---
-{userPrompt}</pre>
+        <div class="mt-1.5 p-2 rounded bg-black/60 text-[10px] text-slate-300 overflow-x-auto max-h-56 font-mono border {borderClass} space-y-2">
+          {#each messages as msg, i (i)}
+            <div class="border-b border-slate-800/80 pb-1.5 last:border-b-0 last:pb-0">
+              <span class="font-bold text-[9px] uppercase px-1.5 py-0.5 rounded {msg.role === 'system' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : msg.role === 'user' ? 'bg-sky-950 text-sky-300 border border-sky-800' : 'bg-amber-950 text-amber-300 border border-amber-800'}">
+                {msg.role}
+              </span>
+              <pre class="mt-1 whitespace-pre-wrap text-slate-300 font-mono text-[10px]">{msg.content}</pre>
+            </div>
+          {/each}
+        </div>
       {/if}
     </div>
   {/if}
@@ -253,7 +259,7 @@
                         </div>
                       </div>
 
-                      {@render promptViewer(`director-${turn.turnIndex}`, turn.director.systemPrompt, turn.director.prompt, 'text-emerald-400', 'border-emerald-900/40')}
+                      {@render messageViewer(`director-${turn.turnIndex}`, turn.director.messages, 'text-emerald-400', 'border-emerald-900/40')}
                     </div>
                   {/if}
 
@@ -303,7 +309,7 @@
                         </div>
                       {/if}
 
-                      {@render promptViewer(`actor-${turn.turnIndex}`, turn.actor.systemPrompt, turn.actor.prompt, 'text-amber-400', 'border-amber-900/40')}
+                      {@render messageViewer(`actor-${turn.turnIndex}`, turn.actor.messages, 'text-amber-400', 'border-amber-900/40')}
                     </div>
                   {/if}
                 </div>

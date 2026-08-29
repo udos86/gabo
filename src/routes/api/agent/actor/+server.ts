@@ -19,7 +19,7 @@ export async function POST({ request }: { request: Request }) {
   if (MOCK_LLM === 'true') {
     await new Promise<void>((resolve) => setTimeout(() => resolve(), 2000));
 
-    result = streamText({
+    const mockStream = streamText({
       model: new MockLanguageModelV3({
         doStream: async () => ({
           stream: simulateReadableStream({
@@ -82,6 +82,10 @@ export async function POST({ request }: { request: Request }) {
       }),
       output: Output.object({ schema: actorOutputSchema }),
       prompt: [{ role: 'assistant', content: '' }]
+    });
+    result = Object.assign(mockStream, {
+      systemMessage: '',
+      userMessage: ''
     }) as unknown as Awaited<ReturnType<typeof runActorAgent>>;
   } else {
     const model = openai(ACTOR_MODEL);
@@ -99,8 +103,7 @@ export async function POST({ request }: { request: Request }) {
       turnIndex,
       startTime,
       model: MOCK_LLM === 'true' ? 'mock-model' : ACTOR_MODEL,
-      systemPrompt: result.prompts?.systemPrompt,
-      prompt: result.prompts?.userPrompt,
+      messages: [result.systemMessage, result.userMessage],
       input: body,
       result,
       errorLabel: 'Actor',

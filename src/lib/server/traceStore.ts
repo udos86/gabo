@@ -4,7 +4,7 @@ import type { Scenario } from '$lib/scenario/scenario';
 import type { LessonState, DirectorOutput } from '$lib/scenario/state';
 import type { DirectorAgentInput } from '$lib/ai/director';
 import type { ActorAgentInput, ActorOutput } from '$lib/ai/schema';
-import { normalizeUsage, type SessionTrace, type TurnTrace, type TraceEvent, type LLMCallTrace, type LLMUsage } from '$lib/trace/types';
+import { normalizeUsage, type SessionTrace, type TurnTrace, type TraceEvent, type LLMCallTrace, type LLMUsage, type TraceMessage } from '$lib/trace/types';
 
 const TRACES_DIR = path.resolve(process.cwd(), 'traces');
 
@@ -289,17 +289,14 @@ export interface AttachStreamTraceOptions<TInput, TOutput> {
   turnIndex: number;
   startTime: number;
   model: string;
-  systemPrompt?: string;
-  prompt?: string;
+  messages: Array<TraceMessage>;
   input: TInput;
   result: { text: PromiseLike<string>; usage: PromiseLike<unknown> };
   onRecorded: (call: LLMCallTrace<TInput, TOutput>) => void;
   errorLabel?: string;
 }
 
-export function attachStreamTrace<TInput, TOutput>(
-  options: AttachStreamTraceOptions<TInput, TOutput>
-): void {
+export function attachStreamTrace<TInput, TOutput>(options: AttachStreamTraceOptions<TInput, TOutput>): void {
   if (!options.sessionId) return;
 
   const traceId = globalThis.crypto.randomUUID();
@@ -317,8 +314,7 @@ export function attachStreamTrace<TInput, TOutput>(
         model: options.model,
         durationMs,
         tokens,
-        systemPrompt: options.systemPrompt,
-        prompt: options.prompt,
+        messages: options.messages,
         input: options.input,
         output,
         rawOutput: text

@@ -1,4 +1,4 @@
-import { Output, streamText } from 'ai';
+import { Output, streamText, type SystemModelMessage, type UserModelMessage } from 'ai';
 
 import type { AgentContext, CharacterRoleInput } from '$lib/ai/schema';
 import { directorOutputSchema, type LessonState } from '$lib/scenario/state';
@@ -51,11 +51,7 @@ export type DirectorAgentContext = AgentContext & DirectorAgentInput;
  * Base rubric augmented by any active friction attached to the milestone. This
  * is how a friction makes the SAME milestone harder without adding a new goal.
  */
-function effectiveRubric(
-  milestone: MilestoneDef,
-  frictions: FrictionDef[],
-  activeFrictionIds: string[]
-): string {
+function effectiveRubric(milestone: MilestoneDef, frictions: FrictionDef[], activeFrictionIds: string[]): string {
   const attached = frictions.filter(
     (friction) => friction.attachesTo === milestone.id && activeFrictionIds.includes(friction.id)
   );
@@ -133,7 +129,7 @@ const MODE_GUIDANCE: Record<LessonState['mode'], string> = {
   deflect: 'The student went off-topic. Redirect them back into the scenario in character (e.g. a bakery does not serve pizza) without breaking immersion.'
 };
 
-export function buildDirectorPrompt(input: DirectorAgentInput): { systemPrompt: string; userPrompt: string } {
+export function buildDirectorMessages(input: DirectorAgentInput): { systemMessage: SystemModelMessage, userMessage: UserModelMessage & { content: string; } } {
   const {
     language,
     slugline,
@@ -205,28 +201,23 @@ export function buildDirectorPrompt(input: DirectorAgentInput): { systemPrompt: 
 
           Sense what the student accomplished and author the NPC's next stage directions.`;
 
-  return { systemPrompt, userPrompt };
+  return {
+    systemMessage: { role: 'system', content: systemPrompt },
+    userMessage: { role: 'user', content: userPrompt }
+  };
 }
 
 export async function runDirectorAgent(input: DirectorAgentContext) {
   const { model } = input;
-  const prompts = buildDirectorPrompt(input);
+  const { systemMessage, userMessage } = buildDirectorMessages(input);
 
   const result = streamText({
     model,
     temperature: 0,
-    instructions: {
-      role: 'system',
-      content: prompts.systemPrompt
-    },
-    messages: [
-      {
-        role: 'user',
-        content: prompts.userPrompt
-      }
-    ],
+    instructions: systemMessage,
+    messages: [userMessage],
     output: Output.object({ schema: directorOutputSchema })
   });
 
-  return Object.assign(result, { prompts });
+  return Object.assign(result, { systemMessage, userMessage });
 }

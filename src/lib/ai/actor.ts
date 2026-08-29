@@ -1,17 +1,17 @@
-import { Output, streamText } from "ai";
+import { Output, streamText, type SystemModelMessage, type UserModelMessage } from "ai";
 
 import { actorOutputSchema, type ActorAgentContext, type GaboUIMessage } from "$lib/ai/schema";
 
-export function buildActorPrompt({
-  dialogue,
-  interlocutors,
+export function buildActorMessages({
+  dialogue = '',
+  interlocutors = [],
   language,
   role,
   slugline,
-  stageDirections,
+  stageDirections = [],
   worldFacts = {},
   variables = {}
-}: Omit<ActorAgentContext, 'model'>): { systemPrompt: string; userPrompt: string } {
+}: Omit<ActorAgentContext, 'model'>): { systemMessage: SystemModelMessage, userMessage: UserModelMessage & { content: string; } } {
   const hasWorldFacts = Object.keys(worldFacts).length > 0;
   const hasVariables = Object.keys(variables).length > 0;
 
@@ -53,29 +53,24 @@ export function buildActorPrompt({
 
           ${role.name}:`;
 
-  return { systemPrompt, userPrompt };
+  return {
+    systemMessage: { role: 'system', content: systemPrompt },
+    userMessage: { role: 'user', content: userPrompt }
+  };
 }
 
 export async function runActorAgent(context: ActorAgentContext) {
   const { model } = context;
-  const prompts = buildActorPrompt(context);
+  const { systemMessage, userMessage } = buildActorMessages(context);
 
   const result = streamText({
     model,
-    instructions: {
-      role: 'system',
-      content: prompts.systemPrompt
-    },
-    messages: [
-      {
-        role: 'user',
-        content: prompts.userPrompt
-      }
-    ],
+    instructions: systemMessage,
+    messages: [userMessage],
     output: Output.object({ schema: actorOutputSchema })
   });
 
-  return Object.assign(result, { prompts });
+  return Object.assign(result, { systemMessage, userMessage });
 }
 
 export function convertToDialogue(messages: Array<GaboUIMessage>, characters: Record<string, { role: { name: string } }>) {

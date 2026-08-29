@@ -112,8 +112,10 @@ describe('TraceStore', () => {
         model: 'gpt-4o-mini',
         durationMs: 450,
         tokens: { promptTokens: 120, completionTokens: 40, totalTokens: 160 },
-        systemPrompt: 'System instruction...',
-        prompt: 'User prompt...',
+        messages: [
+          { role: 'system', content: 'System instruction...' },
+          { role: 'user', content: 'User prompt...' }
+        ],
         input: {} as unknown as DirectorAgentInput,
         output: {
           agent: 'director',
@@ -156,8 +158,10 @@ describe('TraceStore', () => {
       model: 'gpt-4o-mini',
       durationMs: 320,
       tokens: { promptTokens: 80, completionTokens: 25, totalTokens: 105 },
-      systemPrompt: 'Actor system prompt',
-      prompt: 'Actor prompt',
+      messages: [
+        { role: 'system', content: 'Actor system prompt' },
+        { role: 'user', content: 'Actor prompt' }
+      ],
       input: {} as unknown as ActorAgentInput,
       output: {
         agent: 'actor',
