@@ -134,3 +134,48 @@ export const traceActionSchema = z.discriminatedUnion('action', [
 ]);
 
 export type TraceAction = z.infer<typeof traceActionSchema>;
+
+export const judgeFindingSchema = z.object({
+  category: z.enum([
+    'naturalness',
+    'continuity',
+    'sensing_accuracy',
+    'pedagogy_and_guidance',
+    'technical'
+  ]),
+  severity: z.enum(['critical', 'warning', 'info']),
+  turnIndex: z.number().nullable().describe('Turn index where the issue occurred, or null if general'),
+  description: z.string().describe('Clear explanation of what happened'),
+  evidence: z.string().nullable().describe('Exact quote or state evidence from the trace'),
+  recommendation: z.string().describe('Concrete recommendation for prompt, rubric, or code change')
+});
+
+export type JudgeFinding = z.infer<typeof judgeFindingSchema>;
+
+export const judgeEvaluationSchema = z.object({
+  overallScore: z.number().min(1).max(10).describe('Overall quality score from 1 (poor) to 10 (flawless)'),
+  categoryScores: z.object({
+    naturalness: z.number().min(1).max(10).describe('Naturalness, immersion, and idiomacy of NPC responses'),
+    continuity: z.number().min(1).max(10).describe('Consistency with world facts, previous turns, and memory'),
+    sensingAccuracy: z.number().min(1).max(10).describe('Accuracy of Director milestone sensing & slot filling'),
+    pedagogicalGuidance: z.number().min(1).max(10).describe('Effectiveness of stage directions in guiding without spoiling')
+  }),
+  summary: z.string().describe('High-level executive summary of the evaluation'),
+  milestoneAnalysis: z.string().describe('Evaluation of how milestones were unlocked, tackled, and completed'),
+  findings: z.array(judgeFindingSchema).describe('Specific observations, issues, and actionable suggestions'),
+  promptRecommendations: z.array(
+    z.object({
+      target: z.enum(['director_prompt', 'actor_prompt', 'teacher_prompt', 'scenario_rubric', 'reducer_logic']),
+      currentBehavior: z.string(),
+      recommendedChange: z.string()
+    })
+  ).describe('Concrete improvements to prompts and scenario rubrics')
+});
+
+export type JudgeEvaluation = z.infer<typeof judgeEvaluationSchema>;
+
+export interface JudgeReport extends JudgeEvaluation {
+  sessionId: string;
+  evaluatedAt: string;
+  markdownReport: string;
+}

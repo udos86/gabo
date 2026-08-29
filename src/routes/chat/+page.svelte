@@ -227,6 +227,25 @@
       initialState: lessonState
     });
 
+    // Expose inspection & automation hooks on window for test agents and subagents
+    const win = globalThis as unknown as Record<string, unknown>;
+    win.__GABO_SESSION_ID__ = sessionId;
+    win.__GABO_IS_ANIMATING__ = () => isAnimating;
+    win.__GABO_LESSON_STATE__ = () => lessonState;
+    win.__GABO_MESSAGES__ = () => messages;
+    win.__GABO_GET_TRACE__ = async () => {
+      const res = await fetch(`/api/trace?sessionId=${sessionId}`);
+      return await res.json();
+    };
+    win.__GABO_EVALUATE__ = async () => {
+      const res = await fetch('/api/trace/judge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId })
+      });
+      return await res.json();
+    };
+
     // Opening turn: the Director authors the NPC's first line with no student input yet.
     runDirectorTurn('');
   });

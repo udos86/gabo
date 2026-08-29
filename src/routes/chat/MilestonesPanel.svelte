@@ -27,7 +27,7 @@
   );
 </script>
 
-<div class="w-full bg-slate-50/90 backdrop-blur-md border-b border-slate-200 shadow-sm transition-all duration-300">
+<div class="w-full bg-slate-50/90 backdrop-blur-md border-b border-slate-200 shadow-sm transition-all duration-300" data-testid="milestones-panel">
   <!-- Header / Toggle Button -->
   <button
     type="button"
@@ -94,6 +94,9 @@
         {#each milestones as milestone (milestone.id)}
           {@const status = getStatus(milestone.id)}
           <div
+            data-testid="milestone-item"
+            data-milestone-id={milestone.id}
+            data-status={status}
             class="flex items-start gap-3 p-3 rounded-xl border transition-all duration-300
               {status === 'done' ? 'bg-emerald-50/40 border-emerald-100 shadow-2xs' : ''}
               {status === 'active' || status === 'eligible' ? 'bg-indigo-50/30 border-indigo-100 ring-1 ring-indigo-500/10 shadow-2xs' : ''}

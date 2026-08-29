@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { LessonState } from '$lib/scenario/state';
-  import type { SessionTrace } from '$lib/trace/types';
+  import type { JudgeReport, SessionTrace } from '$lib/trace/types';
 
   interface Props {
     sessionId: string;
@@ -14,6 +14,10 @@
   let copied = $state(false);
   let expandedPrompts = $state<Record<string, boolean>>({});
 
+  let judgeReport = $state<JudgeReport | null>(null);
+  let isEvaluating = $state(false);
+  let judgeError = $state<string | null>(null);
+
   async function fetchTrace() {
     if (!sessionId) return;
     try {
@@ -23,6 +27,29 @@
       }
     } catch (e) {
       console.error('Failed to fetch live trace:', e);
+    }
+  }
+
+  async function triggerJudge() {
+    if (!sessionId) return;
+    isEvaluating = true;
+    judgeError = null;
+    try {
+      const res = await fetch('/api/trace/judge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Evaluation request failed');
+      }
+      judgeReport = data.report as JudgeReport;
+    } catch (err: unknown) {
+      console.error('Judge evaluation failed:', err);
+      judgeError = err instanceof Error ? err.message : String(err);
+    } finally {
+      isEvaluating = false;
     }
   }
 
@@ -129,8 +156,22 @@
         <div class="flex items-center gap-2">
           <button
             type="button"
+            onclick={triggerJudge}
+            disabled={isEvaluating || !liveTrace || liveTrace.turns.length === 0}
+            data-testid="trigger-judge-btn"
+            class="flex items-center gap-1.5 px-3 py-1 text-xs rounded bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-medium transition-colors shadow-xs cursor-pointer disabled:cursor-not-allowed"
+          >
+            {#if isEvaluating}
+              <span class="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+              <span>Evaluating...</span>
+            {:else}
+              <span>⚖️ Run Judge Audit</span>
+            {/if}
+          </button>
+          <button
+            type="button"
             onclick={copySessionId}
-            class="px-2.5 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+            class="px-2.5 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
           >
             {copied ? 'Copied!' : 'Copy ID'}
           </button>
@@ -138,14 +179,14 @@
             type="button"
             onclick={downloadTraceJson}
             disabled={!liveTrace}
-            class="px-2.5 py-1 text-xs rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium transition-colors"
+            class="px-2.5 py-1 text-xs rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium transition-colors cursor-pointer disabled:cursor-not-allowed"
           >
             Export JSON
           </button>
           <button
             type="button"
             onclick={() => (isOpen = false)}
-            class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+            class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
             aria-label="Close"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
@@ -180,6 +221,113 @@
             </p>
           </div>
         </div>
+
+        {#if judgeError}
+          <div class="p-3 rounded-xl bg-rose-950/60 border border-rose-800 text-xs text-rose-300 space-y-1">
+            <p class="font-bold">❌ Evaluation Error:</p>
+            <p>{judgeError}</p>
+          </div>
+        {/if}
+
+        <!-- Judge Evaluation Report Preview -->
+        {#if judgeReport}
+          <div class="bg-slate-950/80 p-5 rounded-2xl border border-purple-500/40 shadow-xl space-y-4" data-testid="judge-report-view">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">⚖️</span>
+                <div>
+                  <h4 class="text-xs font-bold uppercase tracking-wider text-purple-400">Judge LLM Audit Result</h4>
+                  <span class="text-[10px] text-slate-500">{new Date(judgeReport.evaluatedAt).toLocaleTimeString()}</span>
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="text-2xl font-black text-emerald-400">{judgeReport.overallScore}</span>
+                <span class="text-xs text-slate-400"> / 10</span>
+              </div>
+            </div>
+
+            <!-- Category Scores -->
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800 flex justify-between items-center">
+                <span class="text-slate-400">Naturalness:</span>
+                <span class="font-bold font-mono text-emerald-400">{judgeReport.categoryScores.naturalness}/10</span>
+              </div>
+              <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800 flex justify-between items-center">
+                <span class="text-slate-400">Continuity:</span>
+                <span class="font-bold font-mono text-emerald-400">{judgeReport.categoryScores.continuity}/10</span>
+              </div>
+              <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800 flex justify-between items-center">
+                <span class="text-slate-400">Sensing Accuracy:</span>
+                <span class="font-bold font-mono text-emerald-400">{judgeReport.categoryScores.sensingAccuracy}/10</span>
+              </div>
+              <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800 flex justify-between items-center">
+                <span class="text-slate-400">Pedagogy / Guidance:</span>
+                <span class="font-bold font-mono text-emerald-400">{judgeReport.categoryScores.pedagogicalGuidance}/10</span>
+              </div>
+            </div>
+
+            <!-- Summary -->
+            <div class="space-y-1">
+              <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Executive Summary</span>
+              <p class="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-3 rounded-xl border border-slate-800/80">
+                {judgeReport.summary}
+              </p>
+            </div>
+
+            <!-- Milestone Analysis -->
+            {#if judgeReport.milestoneAnalysis}
+              <div class="space-y-1">
+                <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Milestone Progression Analysis</span>
+                <p class="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-3 rounded-xl border border-slate-800/80">
+                  {judgeReport.milestoneAnalysis}
+                </p>
+              </div>
+            {/if}
+
+            <!-- Findings -->
+            {#if judgeReport.findings.length > 0}
+              <div class="space-y-2 pt-2 border-t border-slate-800">
+                <span class="text-xs font-semibold text-slate-400">Key Findings ({judgeReport.findings.length}):</span>
+                {#each judgeReport.findings as finding, idx (idx)}
+                  <div class="p-3 rounded-xl bg-slate-900/90 text-xs space-y-1.5 border border-slate-800">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-2">
+                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase {finding.severity === 'critical' ? 'bg-rose-900/60 text-rose-300 border border-rose-800' : finding.severity === 'warning' ? 'bg-amber-900/60 text-amber-300 border border-amber-800' : 'bg-sky-900/60 text-sky-300 border border-sky-800'}">
+                          {finding.severity}
+                        </span>
+                        <span class="text-[10px] text-purple-400 uppercase font-mono">[{finding.category}]</span>
+                        {#if finding.turnIndex !== null && finding.turnIndex !== undefined}
+                          <span class="text-[10px] text-slate-500 font-mono">Turn {finding.turnIndex}</span>
+                        {/if}
+                      </div>
+                    </div>
+                    <p class="font-medium text-slate-200">{finding.description}</p>
+                    {#if finding.evidence}
+                      <p class="text-[11px] font-mono text-slate-400 bg-slate-950/60 p-1.5 rounded border border-slate-800/50 italic">
+                        "{finding.evidence}"
+                      </p>
+                    {/if}
+                    <p class="text-slate-300 text-[11px]"><span class="text-amber-400 font-semibold">💡 Recommendation:</span> {finding.recommendation}</p>
+                  </div>
+                {/each}
+              </div>
+            {/if}
+
+            <!-- Prompt Recommendations -->
+            {#if judgeReport.promptRecommendations && judgeReport.promptRecommendations.length > 0}
+              <div class="space-y-2 pt-2 border-t border-slate-800">
+                <span class="text-xs font-semibold text-slate-400">Prompt & Scenario Improvements:</span>
+                {#each judgeReport.promptRecommendations as rec, idx (idx)}
+                  <div class="p-3 rounded-xl bg-slate-900/80 text-xs space-y-1 border border-slate-800">
+                    <div class="font-bold text-indigo-400 uppercase font-mono text-[10px]">Target: {rec.target}</div>
+                    <div class="text-slate-400 text-[11px]"><span class="text-slate-500">Observed:</span> {rec.currentBehavior}</div>
+                    <div class="text-emerald-300 text-[11px]"><span class="text-emerald-400 font-semibold">Change:</span> {rec.recommendedChange}</div>
+                  </div>
+                {/each}
+              </div>
+            {/if}
+          </div>
+        {/if}
 
         <!-- Turns Stream / History Snapshot -->
         <div class="space-y-3">

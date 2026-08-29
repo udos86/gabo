@@ -41,7 +41,7 @@
   });
 </script>
 
-<li class="flex flex-col px-12 py-6" in:messageIn={{ role: message.role }} out:fade={{ duration: 200 }}>
+<li class="flex flex-col px-12 py-6" in:messageIn={{ role: message.role }} out:fade={{ duration: 200 }} data-testid="chat-bubble" data-role={message.role} data-status={message.metadata?.status}>
   <div class="relative flex items-start gap-4 {isUser ? 'flex-row-reverse' : ''}">
     {#if isUser && userMeta}
       <div class="relative shrink-0">
@@ -88,6 +88,7 @@
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
           class={bubbleClass}
+          data-testid="bubble-text"
           onclick={() => {
             // if (isUser && userMeta?.status === 'done') showFeedback = !showFeedback;
           }}>
