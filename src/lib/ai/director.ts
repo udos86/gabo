@@ -157,10 +157,9 @@ export async function runDirectorAgent(input: DirectorAgentContext) {
   return streamText({
     model,
     temperature: 0,
-    messages: [
-      {
-        role: 'system',
-        content: `
+    instructions: {
+      role: 'system',
+      content: `
           You are the hidden Director of a ${language} language-learning role-play. You do two jobs in one:
           (1) SENSE what the student's latest input accomplished, and (2) AUTHOR the next stage
           directions for the NPC. You never speak to the student directly — the Actor does that.
@@ -200,7 +199,8 @@ export async function runDirectorAgent(input: DirectorAgentContext) {
              slots from earlier turns.
           7. Stage directions are instructions for the NPC actor, not spoken lines. Keep them short and actionable. If the targeted milestone is a 'student' milestone, the stage direction MUST instruct the NPC to elicit the required information, UNLESS there is an 'npcAssumption'. If there is an 'npcAssumption', direct the NPC to act on it the FIRST time. If the student pushes back, adapt and do not repeat the assumption.
           8. Respect world facts and active frictions. The NPC must stay consistent with what already happened.`
-      },
+    },
+    messages: [
       {
         role: 'user',
         content: `
@@ -216,9 +216,9 @@ export async function runDirectorAgent(input: DirectorAgentContext) {
       }
     ],
     output: Output.object({ schema: directorOutputSchema }),
-    onFinish: ({ object }) => {
+    onFinish: ({ content }) => {
       import('fs').then(fs => {
-        fs.appendFileSync('scratch-director.log', "DIRECTOR COMPLETED WITH OBJECT:\n" + JSON.stringify(object, null, 2) + "\n\n");
+        fs.appendFileSync('scratch-director.log', "DIRECTOR COMPLETED WITH OBJECT:\n" + JSON.stringify(content, null, 2) + "\n\n");
       });
     }
   });

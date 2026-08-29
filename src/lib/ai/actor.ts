@@ -8,10 +8,10 @@ export async function runActorAgent({ dialogue, interlocutors, language, model, 
 
   return streamText({
     model,
-    messages: [
-      {
-        role: 'system',
-        content: `
+    instructions:
+    {
+      role: 'system',
+      content: `
           You are playing the following role in an interactive, didactic language-learning roleplay: ${role.description}.
           Your primary purpose is to help the student practice ${language}. You must balance acting in character with being a patient, pedagogically effective conversational partner.
           
@@ -37,10 +37,10 @@ export async function runActorAgent({ dialogue, interlocutors, language, model, 
           12. Never contradict an established world fact, and never perform or announce an action that a world fact says already happened.
 
           You are now in character.`
-      },
-      {
-        role: 'user',
-        content: `
+    },
+    messages: [{
+      role: 'user',
+      content: `
           <dialogue-history>
             ${dialogue}
           </dialogue-history>
@@ -50,8 +50,7 @@ export async function runActorAgent({ dialogue, interlocutors, language, model, 
           </stage-directions>
 
           ${role.name}:`
-      }
-    ],
+    }],
     output: Output.object({ schema: actorOutputSchema })
   });
 

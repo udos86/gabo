@@ -5,10 +5,9 @@ import { teacherOutputSchema, type TeacherAgentContext } from "$lib/ai/schema";
 export async function runTeacherAgent({ actions, dialogue, input, interlocutors, language, model, role, slugline }: TeacherAgentContext) {
   return streamText({
     model,
-    messages: [
-      {
-        role: 'system',
-        content: `
+    instructions: {
+      role: 'system',
+      content: `
           You are an expert ${language} Teacher and Dialogue Evaluator. 
           Your task is to evaluate the <student-input> provided in the user message as part of a conversation in a roleplay.
           You will return whether the student passes the excercise and provide feedback according to the rules below.
@@ -32,10 +31,10 @@ export async function runTeacherAgent({ actions, dialogue, input, interlocutors,
           - If the student fails the excercise, provide feedback in 40 words or less.
           
           Be a strict yet encouraging teacher.`
-      },
-      {
-        role: 'user',
-        content: `
+    },
+    messages: [{
+      role: 'user',
+      content: `
           <dialogue-history>
             ${dialogue}
           </dialogue-history>
@@ -49,8 +48,7 @@ export async function runTeacherAgent({ actions, dialogue, input, interlocutors,
           </student-input>
 
           Please evaluate the student-input based on the dialogue-history and actions.`
-      }
-    ],
+    }],
     output: Output.object({ schema: teacherOutputSchema })
   });
 }
