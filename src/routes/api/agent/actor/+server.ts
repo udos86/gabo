@@ -1,3 +1,4 @@
+import { toTextStream } from 'ai';
 import { createOpenAI } from "@ai-sdk/openai";
 
 import { OPENAI_API_KEY, ACTOR_MODEL, MOCK_LLM } from '$env/static/private';
@@ -90,6 +91,5 @@ export async function POST({ request }: { request: Request }) {
 
   if (result === undefined) return new Response("Invalid agent type", { status: 400 });
 
-  return result.toTextStreamResponse();
-  // return createTextStreamResponse({ textStream: result.textStream });
+  return toTextStream({ stream: result.stream });
 }

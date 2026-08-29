@@ -1,3 +1,4 @@
+import { toTextStream } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 
 import { OPENAI_API_KEY, DIRECTOR_MODEL } from '$env/static/private';
@@ -11,5 +12,5 @@ export async function POST({ request }: { request: Request }) {
   const model = openai(DIRECTOR_MODEL);
   const result = await runDirectorAgent({ ...body, model });
 
-  return result.toTextStreamResponse();
+  return toTextStream({ stream: result.stream });
 }
