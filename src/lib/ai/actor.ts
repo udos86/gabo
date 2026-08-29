@@ -2,16 +2,20 @@ import { Output, streamText } from "ai";
 
 import { actorOutputSchema, type ActorAgentContext, type GaboUIMessage } from "$lib/ai/schema";
 
-export async function runActorAgent({ dialogue, interlocutors, language, model, role, slugline, stageDirections, worldFacts = {}, variables = {} }: ActorAgentContext) {
+export function buildActorPrompt({
+  dialogue,
+  interlocutors,
+  language,
+  role,
+  slugline,
+  stageDirections,
+  worldFacts = {},
+  variables = {}
+}: Omit<ActorAgentContext, 'model'>): { systemPrompt: string; userPrompt: string } {
   const hasWorldFacts = Object.keys(worldFacts).length > 0;
   const hasVariables = Object.keys(variables).length > 0;
 
-  return streamText({
-    model,
-    instructions:
-    {
-      role: 'system',
-      content: `
+  const systemPrompt = `
           You are playing the following role in an interactive, didactic language-learning roleplay: ${role.description}.
           Your primary purpose is to help the student practice ${language}. You must balance acting in character with being a patient, pedagogically effective conversational partner.
           
@@ -36,11 +40,9 @@ export async function runActorAgent({ dialogue, interlocutors, language, model, 
           11. Pay close attention to gender-specific language (pronouns, terms of address like 'Monsieur'/'Madame', and grammatical agreement) based on your gender (${role.gender}) and the gender of your interlocutors.
           12. Never contradict an established world fact, and never perform or announce an action that a world fact says already happened.
 
-          You are now in character.`
-    },
-    messages: [{
-      role: 'user',
-      content: `
+          You are now in character.`;
+
+  const userPrompt = `
           <dialogue-history>
             ${dialogue}
           </dialogue-history>
@@ -49,11 +51,31 @@ export async function runActorAgent({ dialogue, interlocutors, language, model, 
             ${stageDirections.length > 0 ? stageDirections.join(', ') : 'Respond naturally to the last speaker and continue the scene.'}
           </stage-directions>
 
-          ${role.name}:`
-    }],
+          ${role.name}:`;
+
+  return { systemPrompt, userPrompt };
+}
+
+export async function runActorAgent(context: ActorAgentContext) {
+  const { model } = context;
+  const prompts = buildActorPrompt(context);
+
+  const result = streamText({
+    model,
+    instructions: {
+      role: 'system',
+      content: prompts.systemPrompt
+    },
+    messages: [
+      {
+        role: 'user',
+        content: prompts.userPrompt
+      }
+    ],
     output: Output.object({ schema: actorOutputSchema })
   });
 
+  return Object.assign(result, { prompts });
 }
 
 export function convertToDialogue(messages: Array<GaboUIMessage>, characters: Record<string, { role: { name: string } }>) {

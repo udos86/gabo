@@ -15,11 +15,13 @@
   import ChatBubble from './ChatBubble.svelte';
   import ChatInput from './ChatInput.svelte';
   import MilestonesPanel from './MilestonesPanel.svelte';
+  import TraceDebugDrawer from './TraceDebugDrawer.svelte';
 
   let { data }: PageProps = $props();
 
   const scenario = $derived(data.scenario);
 
+  let sessionId = $state(globalThis.crypto.randomUUID());
   let messages = $state<Array<GaboUIMessage>>([]);
   let lessonState = $state<LessonState | null>(null);
   let chatInput = $state('');
@@ -34,6 +36,18 @@
 
   const isFinished = $derived(lessonState !== null && lessonState.status !== 'in_progress');
 
+  import type { TraceAction } from '$lib/trace/types';
+
+  function syncTrace(payload: TraceAction) {
+    void fetch('/api/trace', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).catch((err) => {
+      console.error('[Trace Sync Error]:', err);
+    });
+  }
+
   function interlocutorRoles(excludeCharacterId: string) {
     return Object.values(scenario.characters)
       .filter((character) => character.id !== excludeCharacterId)
@@ -44,8 +58,13 @@
   function runDirectorTurn(studentInput: string) {
     if (lessonState === null) return;
 
+    const currentTurn = lessonState.turn;
     const dialogue = convertToDialogue(messages, scenario.characters);
-    const input = buildDirectorInput(scenario, lessonState, dialogue, studentInput);
+    const input = {
+      ...buildDirectorInput(scenario, lessonState, dialogue, studentInput),
+      sessionId,
+      turnIndex: currentTurn
+    };
 
     const director = new Experimental_StructuredObject({
       api: '/api/agent/director',
@@ -55,7 +74,26 @@
 
         // The reducer is the sole authority: it validates the Director's proposals.
         lessonState = reduce(lessonState, scenario, object);
-        runActorTurn(object.stageDirections);
+
+        // Sync reduced state to trace
+        syncTrace({
+          action: 'reduce',
+          sessionId,
+          turnIndex: currentTurn,
+          state: lessonState
+        });
+
+        // If scenario finished, finalize trace session
+        if (lessonState.status !== 'in_progress') {
+          syncTrace({
+            action: 'finish',
+            sessionId,
+            status: lessonState.status,
+            finalState: lessonState
+          });
+        }
+
+        runActorTurn(object.stageDirections, currentTurn);
       },
     });
 
@@ -63,7 +101,7 @@
   }
 
   /** The Actor improvises the NPC's spoken line from the Director's stage directions. */
-  function runActorTurn(stageDirections: Array<string>) {
+  function runActorTurn(stageDirections: Array<string>, turnIndex: number) {
     if (lessonState === null) return;
 
     const npc = scenario.characters[scenario.npcCharacterId];
@@ -104,6 +142,8 @@
     structuredObjects.set(messageId, actor);
 
     actor.submit({
+      sessionId,
+      turnIndex,
       language: scenario.language,
       slugline: scenario.setting.slugline,
       role: npc.role,
@@ -178,10 +218,21 @@
 
   onMount(() => {
     lessonState = createInitialState(scenario);
+
+    // Initialize session in trace store
+    syncTrace({
+      action: 'start',
+      sessionId,
+      scenario,
+      initialState: lessonState
+    });
+
     // Opening turn: the Director authors the NPC's first line with no student input yet.
     runDirectorTurn('');
   });
 </script>
+
+<TraceDebugDrawer {sessionId} {lessonState} />
 
 <MilestonesPanel milestones={scenario.milestones} statuses={lessonState?.milestones} />
 

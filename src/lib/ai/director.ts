@@ -133,9 +133,8 @@ const MODE_GUIDANCE: Record<LessonState['mode'], string> = {
   deflect: 'The student went off-topic. Redirect them back into the scenario in character (e.g. a bakery does not serve pizza) without breaking immersion.'
 };
 
-export async function runDirectorAgent(input: DirectorAgentContext) {
+export function buildDirectorPrompt(input: DirectorAgentInput): { systemPrompt: string; userPrompt: string } {
   const {
-    model,
     language,
     slugline,
     goal,
@@ -154,12 +153,7 @@ export async function runDirectorAgent(input: DirectorAgentContext) {
     studentInput
   } = input;
 
-  return streamText({
-    model,
-    temperature: 0,
-    instructions: {
-      role: 'system',
-      content: `
+  const systemPrompt = `
           You are the hidden Director of a ${language} language-learning role-play. You do two jobs in one:
           (1) SENSE what the student's latest input accomplished, and (2) AUTHOR the next stage
           directions for the NPC. You never speak to the student directly — the Actor does that.
@@ -198,12 +192,9 @@ export async function runDirectorAgent(input: DirectorAgentContext) {
              invent or rename a slot id. Set evidenceTurn to ${turn} (this turn). Do not re-fill
              slots from earlier turns.
           7. Stage directions are instructions for the NPC actor, not spoken lines. Keep them short and actionable. If the targeted milestone is a 'student' milestone, the stage direction MUST instruct the NPC to elicit the required information, UNLESS there is an 'npcAssumption'. If there is an 'npcAssumption', direct the NPC to act on it the FIRST time. If the student pushes back, adapt and do not repeat the assumption.
-          8. Respect world facts and active frictions. The NPC must stay consistent with what already happened.`
-    },
-    messages: [
-      {
-        role: 'user',
-        content: `
+          8. Respect world facts and active frictions. The NPC must stay consistent with what already happened.`;
+
+  const userPrompt = `
           <dialogue-history>
             ${dialogue}
           </dialogue-history>
@@ -212,14 +203,30 @@ export async function runDirectorAgent(input: DirectorAgentContext) {
             ${studentInput}
           </student-input>
 
-          Sense what the student accomplished and author the NPC's next stage directions.`
+          Sense what the student accomplished and author the NPC's next stage directions.`;
+
+  return { systemPrompt, userPrompt };
+}
+
+export async function runDirectorAgent(input: DirectorAgentContext) {
+  const { model } = input;
+  const prompts = buildDirectorPrompt(input);
+
+  const result = streamText({
+    model,
+    temperature: 0,
+    instructions: {
+      role: 'system',
+      content: prompts.systemPrompt
+    },
+    messages: [
+      {
+        role: 'user',
+        content: prompts.userPrompt
       }
     ],
-    output: Output.object({ schema: directorOutputSchema }),
-    onFinish: ({ content }) => {
-      import('fs').then(fs => {
-        fs.appendFileSync('scratch-director.log', "DIRECTOR COMPLETED WITH OBJECT:\n" + JSON.stringify(content, null, 2) + "\n\n");
-      });
-    }
+    output: Output.object({ schema: directorOutputSchema })
   });
+
+  return Object.assign(result, { prompts });
 }

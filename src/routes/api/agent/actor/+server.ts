@@ -1,19 +1,23 @@
-import { toTextStream } from 'ai';
-import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAI } from '@ai-sdk/openai';
 
 import { OPENAI_API_KEY, ACTOR_MODEL, MOCK_LLM } from '$env/static/private';
-import { runActorAgent } from "$lib/ai/actor.js";
-import { Output, simulateReadableStream, streamText } from "ai";
-import { MockLanguageModelV3 } from "ai/test";
-import { actorOutputSchema, type ActorAgentContext } from "$lib/ai/schema.js";
+import { runActorAgent } from '$lib/ai/actor.js';
+import { Output, simulateReadableStream, streamText, createTextStreamResponse, toTextStream } from 'ai';
+import { MockLanguageModelV3 } from 'ai/test';
+import { actorOutputSchema, type ActorAgentInput, type ActorOutput } from '$lib/ai/schema.js';
+import { traceStore, attachStreamTrace } from '$lib/server/traceStore';
+import type { WithTraceMeta } from '$lib/trace/types';
 
 const openai = createOpenAI({ apiKey: OPENAI_API_KEY });
 
 export async function POST({ request }: { request: Request }) {
+  const startTime = Date.now();
+  const body = (await request.json().catch(() => ({}))) as WithTraceMeta<ActorAgentInput>;
+
   let result: Awaited<ReturnType<typeof runActorAgent>> | undefined;
 
   if (MOCK_LLM === 'true') {
-    await new Promise<void>(resolve => setTimeout(() => resolve(), 2000));
+    await new Promise<void>((resolve) => setTimeout(() => resolve(), 2000));
 
     result = streamText({
       model: new MockLanguageModelV3({
@@ -63,33 +67,50 @@ export async function POST({ request }: { request: Request }) {
                     total: 3,
                     noCache: 3,
                     cacheRead: undefined,
-                    cacheWrite: undefined,
+                    cacheWrite: undefined
                   },
                   outputTokens: {
                     total: 10,
                     text: 10,
-                    reasoning: undefined,
-                  },
-                },
-              },
-            ],
-          }),
-        }),
+                    reasoning: undefined
+                  }
+                }
+              }
+            ]
+          })
+        })
       }),
       output: Output.object({ schema: actorOutputSchema }),
       prompt: [{ role: 'assistant', content: '' }]
     }) as unknown as Awaited<ReturnType<typeof runActorAgent>>;
-
   } else {
-
     const model = openai(ACTOR_MODEL);
-    const body = await request.json();
-    const { dialogue, interlocutors, language, role, slugline, stageDirections, variables, worldFacts } = body as ActorAgentContext;
-    console.log("ACTOR RECEIVED STAGE DIRECTIONS:", stageDirections);
+    const { dialogue, interlocutors, language, role, slugline, stageDirections, variables, worldFacts } = body;
     result = await runActorAgent({ dialogue, interlocutors, language, model, role, slugline, stageDirections, variables, worldFacts });
   }
 
-  if (result === undefined) return new Response("Invalid agent type", { status: 400 });
+  if (result === undefined) return new Response('Invalid agent type', { status: 400 });
 
-  return toTextStream({ stream: result.stream });
+  if (body.sessionId) {
+    const turnIndex = body.turnIndex ?? 1;
+
+    attachStreamTrace<ActorAgentInput, ActorOutput>({
+      sessionId: body.sessionId,
+      turnIndex,
+      startTime,
+      model: MOCK_LLM === 'true' ? 'mock-model' : ACTOR_MODEL,
+      systemPrompt: result.prompts?.systemPrompt,
+      prompt: result.prompts?.userPrompt,
+      input: body,
+      result,
+      errorLabel: 'Actor',
+      onRecorded: (call) => {
+        traceStore.recordActorCall(body.sessionId!, turnIndex, call);
+      }
+    });
+  }
+
+  return createTextStreamResponse({
+    stream: toTextStream({ stream: result.stream })
+  });
 }
