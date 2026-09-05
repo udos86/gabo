@@ -59,7 +59,7 @@
       "prerequisites": [
         "request_table"
       ],
-      "rubric": "The student expresses a clear preference to sit inside or outside.",
+      "rubric": "The student expresses a clear preference to sit inside or outside, or adapts politely if their preferred option is unavailable.",
       "fillsSlots": [
         "seating_preference"
       ],
@@ -72,7 +72,7 @@
       "prerequisites": [
         "choose_location"
       ],
-      "rubric": "The student acknowledges being seated and receiving the menu (e.g. thanks the waiter).",
+      "rubric": "The student acknowledges being seated and/or receiving the menu (e.g. thanks the waiter or settles in).",
       "fillsSlots": []
     },
     {
@@ -122,9 +122,9 @@
     {
       "id": "terrace_full",
       "attachesTo": "choose_location",
-      "description": "the outdoor terrace is completely full this morning",
+      "description": "the outdoor terrace is completely full this morning; if the guest requests outdoor seating, the waiter must inform them it is full",
       "extraObjective": "accept a table inside instead, or politely ask to wait",
-      "rubric": "The student adapts to the terrace being full by accepting an inside table or asking to wait.",
+      "rubric": "The student adapts to the terrace being full by accepting an inside table or politely asking to wait.",
       "probability": 1,
       "avgTurnCost": 2
     }

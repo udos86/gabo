@@ -174,21 +174,26 @@ export function buildDirectorMessages(input: DirectorAgentInput): { systemMessag
           ${activeFrictions.length > 0 ? `ACTIVE FRICTIONS (weave in naturally; the NPC imposes these obstacles):\n${activeFrictions.map((f) => `- ${f.id}: ${f.description} → student must ${f.extraObjective}`).join('\n')}` : 'No active frictions.'}
 
           RULES:
-          1. SENSING (observedDeltas): Evaluate the student's input against ALL milestones that are not 'done'. If the student's input satisfies a milestone's completion criteria, you MUST report it in completedMilestones immediately — even if the milestone is 'locked'. Do not withhold completions because of a milestone's status; the system safely buffers run-ahead completions.
-          2. AUTHORING (stageDirections): Direct the NPC to pursue the current 'active' or 'eligible' milestone. HOWEVER, if your sensing (observedDeltas) reports that the student just completed a milestone, you MUST advance the scene by pursuing the *next* logical milestone in the list, even if it is currently labeled as 'locked'. CRITICAL: Never direct the NPC to skip over uncompleted milestones. If the current milestone requires the student to provide information (e.g. seating preference), DO NOT skip it. If the milestone provides an 'npcAssumption', direct the NPC to act on that assumption INITIALLY. If the student contradicts or corrects the assumption, the NPC must adapt naturally and NOT repeat the assumption.
-          3. Judge completion strictly against each milestone's stated completion criteria.
+          1. SENSING (observedDeltas): Evaluate the student's input against ALL milestones that are not 'done'. If the student's input satisfies a milestone's completion criteria, you MUST report it in completedMilestones immediately — even if the milestone is 'locked'. If a student's single utterance fulfills multiple milestones at once (e.g., greeting and requesting a table together), report ALL satisfied milestones in completedMilestones in this same turn without delay. Do not withhold completions because of a milestone's status; the system safely buffers run-ahead completions.
+          2. AUTHORING (stageDirections): Direct the NPC to pursue the current 'active' or 'eligible' milestone. If your sensing (observedDeltas) reports that the student just completed a milestone, advance the scene toward the next logical milestone.
+             CRITICAL: Never direct the NPC to skip over uncompleted milestones. If the current milestone requires the student to provide information (e.g. seating preference), DO NOT skip it. If the milestone provides an 'npcAssumption', direct the NPC to act on that assumption INITIALLY. If the student contradicts or corrects the assumption, the NPC must adapt naturally (unless constrained by an active friction) and NOT repeat the assumption.
+          3. ACTIVE FRICTIONS ARE HARD CONSTRAINTS: When a friction is active (e.g. terrace_full), the NPC MUST enforce the obstacle. The NPC CANNOT grant a student request that contradicts an active friction (e.g., giving a table on a full terrace, or claiming one suddenly became available). Instead, the NPC must politely explain the constraint in character and guide the student toward the alternative specified in the friction's extraObjective (e.g. sitting inside or waiting). The student must satisfy this extraObjective to complete the milestone.
+          4. PACING & TRANSITIONS: Maintain natural narrative pacing between milestones. Do NOT rush multiple interaction stages into one breath. For example:
+             - When moving to seating and menu presentation (get_seated), direct the NPC to seat the guest, present the menu, and invite them to take their time or suggest a house specialty.
+             - Do NOT immediately demand food and drink orders before the guest has had a chance to settle and review the menu.
+          5. Judge completion strictly against each milestone's stated completion criteria.
              A 'student' milestone is complete the moment the STUDENT's own utterance satisfies its
              criteria — do NOT wait for the NPC to act or acknowledge first. A 'world' milestone is
              complete when the criteria about the NPC's action / world state are met (often the student
              acknowledging something the NPC did). Never delay a satisfied 'student' milestone because
              a later step hasn't happened yet.
-          4. Report deltas honestly. If you are unsure a milestone was met, do NOT report it complete.
-          5. Never invent milestones that are not listed. Never let the NPC do the student's job for them.
-          6. For any slot you fill, use ONLY the exact slot ids listed under SLOTS above — never
+          6. Report deltas honestly. If you are unsure a milestone was met, do NOT report it complete.
+          7. Never invent milestones that are not listed. Never let the NPC do the student's job for them.
+          8. For any slot you fill, use ONLY the exact slot ids listed under SLOTS above — never
              invent or rename a slot id. Set evidenceTurn to ${turn} (this turn). Do not re-fill
              slots from earlier turns.
-          7. Stage directions are instructions for the NPC actor, not spoken lines. Keep them short and actionable. If the targeted milestone is a 'student' milestone, the stage direction MUST instruct the NPC to elicit the required information, UNLESS there is an 'npcAssumption'. If there is an 'npcAssumption', direct the NPC to act on it the FIRST time. If the student pushes back, adapt and do not repeat the assumption.
-          8. Respect world facts and active frictions. The NPC must stay consistent with what already happened.`;
+          9. Stage directions are instructions for the NPC actor, not spoken lines. Keep them short, actionable, and culturally authentic. If the targeted milestone is a 'student' milestone, the stage direction MUST instruct the NPC to elicit the required information, UNLESS there is an 'npcAssumption'.
+          10. Respect world facts and active frictions. The NPC must stay consistent with what already happened.`;
 
   const userPrompt = `
           <dialogue-history>
