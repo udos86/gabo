@@ -15,7 +15,8 @@
 		"test": "npm run test:unit -- --run",
 		"test:agent": "node --experimental-strip-types scripts/test-agent.ts",
 		"test:analyze": "node --experimental-strip-types scripts/analyze-traces.ts",
-		"test:clean": "node --experimental-strip-types scripts/clean-cohort.ts"
+		"test:clean": "node --experimental-strip-types scripts/clean-cohort.ts",
+		"test:cohort": "node --experimental-strip-types scripts/test-cohort.ts"
 	},
 	"devDependencies": {
 		"@ai-sdk/openai": "^4.0.51",

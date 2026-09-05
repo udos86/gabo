@@ -62,10 +62,6 @@ npm run check
 # 2. Unit tests (reducer, judge, traceStore)
 npm run test:unit
 ```
-*(Optional)* Re-run an agent session to verify live behavior:
-```bash
-npm run test:agent -- --persona=friction
-```
 
 ### Phase 5: Cohort Trace Cleanup
 Only when all edits are successfully applied and verification tests pass:
