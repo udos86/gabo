@@ -97,25 +97,20 @@
             data-testid="milestone-item"
             data-milestone-id={milestone.id}
             data-status={status}
-            class="flex items-start gap-3 p-3 rounded-xl border transition-all duration-300
-              {status === 'done' ? 'bg-emerald-50/40 border-emerald-100 shadow-2xs' : ''}
-              {status === 'active' || status === 'eligible' ? 'bg-indigo-50/30 border-indigo-100 ring-1 ring-indigo-500/10 shadow-2xs' : ''}
-              {status === 'locked' ? 'bg-slate-50/20 border-slate-100 opacity-60' : ''}
-              {status === 'skipped' ? 'bg-slate-50/30 border-slate-100 opacity-50 line-through' : ''}
-            "
+            class="flex items-start gap-3 p-3 rounded-xl border transition-all duration-300 group
+              {status === 'done'
+                ? 'bg-emerald-50/60 border-emerald-200/80 shadow-2xs'
+                : status === 'skipped'
+                  ? 'bg-slate-50/40 border-slate-200/60 opacity-50 line-through'
+                  : 'bg-white/80 border-slate-200/80 shadow-2xs hover:border-slate-300 hover:bg-white'}"
           >
             <!-- Status indicator icon -->
             <div class="shrink-0 mt-0.5">
               {#if status === 'done'}
-                <div class="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-2xs">
+                <div class="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-2xs animate-pop-in">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
                     <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
                   </svg>
-                </div>
-              {:else if status === 'active' || status === 'eligible'}
-                <div class="relative w-5 h-5 flex items-center justify-center">
-                  <div class="absolute inset-0 rounded-full bg-indigo-500/20 animate-ping"></div>
-                  <div class="w-2.5 h-2.5 rounded-full bg-indigo-600"></div>
                 </div>
               {:else if status === 'skipped'}
                 <div class="w-5 h-5 rounded-full border-2 border-slate-300 bg-slate-100 flex items-center justify-center text-slate-400">
@@ -124,22 +119,18 @@
                   </svg>
                 </div>
               {:else}
-                <!-- Locked status -->
-                <div class="w-5 h-5 rounded-full border border-slate-300 flex items-center justify-center text-slate-400 bg-slate-50">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5">
-                    <path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clip-rule="evenodd" />
-                  </svg>
-                </div>
+                <!-- Open milestone: neutral, available goal in checklist style -->
+                <div class="w-5 h-5 rounded-full border-2 border-slate-300 bg-white flex items-center justify-center transition-colors group-hover:border-slate-400"></div>
               {/if}
             </div>
 
             <!-- Milestone Objective -->
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-slate-700 leading-snug break-words">
+              <p class="text-sm font-medium leading-snug break-words {status === 'done' ? 'text-emerald-950 font-semibold' : 'text-slate-700'}">
                 {milestone.objective}
               </p>
               {#if milestone.optional}
-                <span class="inline-flex mt-1 items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-500 uppercase tracking-wider">
+                <span class="inline-flex mt-1 items-center px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider {status === 'done' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">
                   Optional
                 </span>
               {/if}
@@ -150,3 +141,23 @@
     </div>
   {/if}
 </div>
+
+<style>
+  @keyframes pop-in {
+    0% {
+      transform: scale(0.6);
+      opacity: 0;
+    }
+    70% {
+      transform: scale(1.15);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .animate-pop-in {
+    animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  }
+</style>
