@@ -29,8 +29,21 @@ export async function POST({ request }) {
 
   switch (payload.action) {
     case 'start': {
-      const trace = traceStore.startSession(payload.scenario, payload.initialState, payload.sessionId);
+      const trace = traceStore.startSession(
+        payload.scenario,
+        payload.initialState,
+        payload.sessionId,
+        payload.autoPersist
+      );
       return json({ success: true, trace });
+    }
+
+    case 'persist': {
+      const success = traceStore.persistSessionById(payload.sessionId);
+      if (!success) {
+        return json({ error: `Session not found: ${payload.sessionId}` }, { status: 404 });
+      }
+      return json({ success: true, persisted: true });
     }
 
     case 'reduce': {

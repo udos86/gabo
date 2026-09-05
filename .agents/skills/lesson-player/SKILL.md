@@ -26,7 +26,7 @@ This skill drives autonomous student playthroughs of interactive Gabo language l
 Use the `browser_subagent` tool with `RecordingName: 'lesson_playthrough'`.
 
 **Instructions for the Subagent:**
-1. Navigate to `http://127.0.0.1:5173/chat`.
+1. Navigate to `http://127.0.0.1:5173/chat?autoPersist=true`.
 2. Wait until the Waiter's opening message appears with status `done` (`[data-testid="chat-bubble"][data-role="assistant"][data-status="done"]`).
 3. **Turn Loop (up to 7 turns):**
    - Read the latest Assistant bubble text.
@@ -35,7 +35,8 @@ Use the `browser_subagent` tool with `RecordingName: 'lesson_playthrough'`.
    - Wait for the next Assistant reply bubble with status `done`.
    - Check `[data-testid="milestones-panel"]` for updated milestones.
    - Stop when all required milestones are `done` or max turns reached.
-4. Extract and report the generated Session ID from `window.__GABO_SESSION_ID__`.
+4. Call `window.__GABO_PERSIST_TRACE__()` (or click `[data-testid="save-trace-btn"]`) to guarantee the trace is persisted to `traces/<sessionId>.json`.
+5. Extract and report the generated Session ID from `window.__GABO_SESSION_ID__`.
 
 ### Mode B: Headless CLI Runner
 For rapid playthroughs or batch generation:

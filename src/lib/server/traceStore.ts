@@ -8,27 +8,30 @@ import { normalizeUsage, type SessionTrace, type TurnTrace, type TraceEvent, typ
 
 const TRACES_DIR = path.resolve(process.cwd(), 'traces');
 
-function ensureTracesDir(): void {
-  if (!fs.existsSync(TRACES_DIR)) {
-    fs.mkdirSync(TRACES_DIR, { recursive: true });
-  }
-}
-
 export class TraceStore {
   private activeTraces = new Map<string, SessionTrace>();
+  private autoPersistSessions = new Set<string>();
+  private tracesDir: string;
 
-  constructor() {
-    ensureTracesDir();
+  constructor(tracesDir: string = TRACES_DIR) {
+    this.tracesDir = tracesDir;
+    this.ensureTracesDir();
     this.loadPersistedSessions();
+  }
+
+  private ensureTracesDir(): void {
+    if (!fs.existsSync(this.tracesDir)) {
+      fs.mkdirSync(this.tracesDir, { recursive: true });
+    }
   }
 
   private loadPersistedSessions(): void {
     try {
-      if (!fs.existsSync(TRACES_DIR)) return;
-      const files = fs.readdirSync(TRACES_DIR);
+      if (!fs.existsSync(this.tracesDir)) return;
+      const files = fs.readdirSync(this.tracesDir);
       for (const file of files) {
         if (file.endsWith('.json') && !file.startsWith('.')) {
-          const filePath = path.join(TRACES_DIR, file);
+          const filePath = path.join(this.tracesDir, file);
           const content = fs.readFileSync(filePath, 'utf-8');
           const parsed = JSON.parse(content) as SessionTrace;
           if (parsed.sessionId) {
@@ -43,15 +46,32 @@ export class TraceStore {
 
   public persistSession(trace: SessionTrace): void {
     try {
-      ensureTracesDir();
-      const filePath = path.join(TRACES_DIR, `${trace.sessionId}.json`);
+      this.ensureTracesDir();
+      const filePath = path.join(this.tracesDir, `${trace.sessionId}.json`);
       fs.writeFileSync(filePath, JSON.stringify(trace, null, 2), 'utf-8');
     } catch (err) {
       console.error(`Failed to persist trace for session ${trace.sessionId}:`, err);
     }
   }
 
-  public startSession(scenario: Scenario, initialState: LessonState, sessionId?: string): SessionTrace {
+  public persistSessionById(sessionId: string): boolean {
+    const trace = this.getSession(sessionId);
+    if (!trace) return false;
+    this.autoPersistSessions.add(sessionId);
+    this.persistSession(trace);
+    return true;
+  }
+
+  public isAutoPersist(sessionId: string): boolean {
+    return this.autoPersistSessions.has(sessionId);
+  }
+
+  public startSession(
+    scenario: Scenario,
+    initialState: LessonState,
+    sessionId?: string,
+    autoPersist = false
+  ): SessionTrace {
     const id = sessionId ?? globalThis.crypto.randomUUID();
     const now = new Date().toISOString();
 
@@ -79,14 +99,17 @@ export class TraceStore {
     };
 
     this.activeTraces.set(id, trace);
-    this.persistSession(trace);
+    if (autoPersist) {
+      this.autoPersistSessions.add(id);
+      this.persistSession(trace);
+    }
     return trace;
   }
 
   public getSession(sessionId: string): SessionTrace | undefined {
     let trace = this.activeTraces.get(sessionId);
     if (!trace) {
-      const filePath = path.join(TRACES_DIR, `${sessionId}.json`);
+      const filePath = path.join(this.tracesDir, `${sessionId}.json`);
       if (fs.existsSync(filePath)) {
         try {
           const content = fs.readFileSync(filePath, 'utf-8');
@@ -155,7 +178,9 @@ export class TraceStore {
     mutate(turn, trace);
     trace.updatedAt = new Date().toISOString();
     this.updateSummaryMetrics(trace);
-    this.persistSession(trace);
+    if (this.autoPersistSessions.has(sessionId)) {
+      this.persistSession(trace);
+    }
   }
 
   public recordDirectorCall(
@@ -205,7 +230,9 @@ export class TraceStore {
     }
 
     trace.updatedAt = new Date().toISOString();
-    this.persistSession(trace);
+    if (this.autoPersistSessions.has(sessionId)) {
+      this.persistSession(trace);
+    }
   }
 
   public finishSession(
@@ -221,7 +248,9 @@ export class TraceStore {
     if (finalState) trace.finalState = finalState;
 
     this.updateSummaryMetrics(trace);
-    this.persistSession(trace);
+    if (this.autoPersistSessions.has(sessionId)) {
+      this.persistSession(trace);
+    }
     return trace;
   }
 

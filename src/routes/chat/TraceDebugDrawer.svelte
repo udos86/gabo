@@ -53,6 +53,29 @@
     }
   }
 
+  let isPersisting = $state(false);
+  let persisted = $state(false);
+
+  async function persistTraceToDisk() {
+    if (!sessionId) return;
+    isPersisting = true;
+    try {
+      const res = await fetch('/api/trace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'persist', sessionId })
+      });
+      if (res.ok) {
+        persisted = true;
+        setTimeout(() => (persisted = false), 3000);
+      }
+    } catch (err) {
+      console.error('Failed to persist trace to disk:', err);
+    } finally {
+      isPersisting = false;
+    }
+  }
+
   function downloadTraceJson() {
     if (!liveTrace) return;
     const blob = new Blob([JSON.stringify(liveTrace, null, 2)], { type: 'application/json' });
@@ -174,6 +197,22 @@
             class="px-2.5 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
           >
             {copied ? 'Copied!' : 'Copy ID'}
+          </button>
+          <button
+            type="button"
+            onclick={persistTraceToDisk}
+            disabled={isPersisting || !liveTrace}
+            data-testid="save-trace-btn"
+            class="flex items-center gap-1 px-2.5 py-1 text-xs rounded {persisted ? 'bg-emerald-600 text-white' : 'bg-emerald-700 hover:bg-emerald-600 text-white'} disabled:opacity-50 font-medium transition-colors cursor-pointer disabled:cursor-not-allowed"
+          >
+            {#if isPersisting}
+              <span class="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+              <span>Saving...</span>
+            {:else if persisted}
+              <span>✓ Saved to traces/</span>
+            {:else}
+              <span>💾 Save Trace</span>
+            {/if}
           </button>
           <button
             type="button"

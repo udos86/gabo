@@ -1,4 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { TraceStore } from './traceStore';
 import type { Scenario } from '$lib/scenario/scenario';
 import type { LessonState } from '$lib/scenario/state';
@@ -78,9 +81,17 @@ const mockInitialState: LessonState = {
 
 describe('TraceStore', () => {
   let store: TraceStore;
+  let tempDir: string;
 
   beforeEach(() => {
-    store = new TraceStore();
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gabo-trace-test-'));
+    store = new TraceStore(tempDir);
+  });
+
+  afterEach(() => {
+    if (tempDir && fs.existsSync(tempDir)) {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 
   it('starts a new session with proper initialization', () => {
@@ -194,5 +205,26 @@ describe('TraceStore', () => {
     expect(finished?.summary?.completedMilestones).toEqual(['greet', 'order']);
     expect(finished?.summary?.uncompletedMilestones).toEqual([]);
     expect(finished?.summary?.filledSlots).toEqual({ drink: 'un café' });
+  });
+
+  it('keeps session in memory by default and persists only on explicit request', () => {
+    const sessionId = `mem-test-${Date.now()}`;
+    store.startSession(mockScenario, mockInitialState, sessionId);
+
+    const filePath = path.join(tempDir, `${sessionId}.json`);
+    expect(fs.existsSync(filePath)).toBe(false);
+
+    // Explicit persist
+    const persisted = store.persistSessionById(sessionId);
+    expect(persisted).toBe(true);
+    expect(fs.existsSync(filePath)).toBe(true);
+  });
+
+  it('automatically persists to disk when autoPersist is true', () => {
+    const sessionId = `auto-test-${Date.now()}`;
+    store.startSession(mockScenario, mockInitialState, sessionId, true);
+
+    const filePath = path.join(tempDir, `${sessionId}.json`);
+    expect(fs.existsSync(filePath)).toBe(true);
   });
 });

@@ -106,7 +106,12 @@ export const traceActionSchema = z.discriminatedUnion('action', [
     action: z.literal('start'),
     sessionId: z.string().optional(),
     scenario: z.any(),
-    initialState: z.any()
+    initialState: z.any(),
+    autoPersist: z.boolean().optional()
+  }),
+  z.object({
+    action: z.literal('persist'),
+    sessionId: z.string()
   }),
   z.object({
     action: z.literal('reduce'),

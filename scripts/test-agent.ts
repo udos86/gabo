@@ -164,8 +164,10 @@ async function run() {
   const page = await context.newPage();
 
   try {
-    console.log(`📡 Navigating to ${BASE_URL}...`);
-    await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 30000 });
+    const targetUrl = new URL(BASE_URL);
+    targetUrl.searchParams.set('autoPersist', 'true');
+    console.log(`📡 Navigating to ${targetUrl.toString()}...`);
+    await page.goto(targetUrl.toString(), { waitUntil: 'networkidle', timeout: 30000 });
 
     // Wait for the opening waiter message to appear and finish animating
     console.log(`⏳ Waiting for Waiter's opening greeting...`);
@@ -267,6 +269,13 @@ async function run() {
     }
 
     console.log(`🏁 Lesson simulation finished! Fetching complete session trace...`);
+    await page.evaluate(async () => {
+      const win = globalThis as unknown as Record<string, unknown>;
+      if (typeof win.__GABO_PERSIST_TRACE__ === 'function') {
+        await (win.__GABO_PERSIST_TRACE__ as () => Promise<unknown>)();
+      }
+    });
+
     const trace = await page.evaluate(async () => {
       const win = globalThis as unknown as Record<string, unknown>;
       return typeof win.__GABO_GET_TRACE__ === 'function' ? await (win.__GABO_GET_TRACE__ as () => Promise<unknown>)() : null;

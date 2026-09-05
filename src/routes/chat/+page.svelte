@@ -219,12 +219,15 @@
   onMount(() => {
     lessonState = createInitialState(scenario);
 
+    const autoPersist = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('autoPersist') === 'true';
+
     // Initialize session in trace store
     syncTrace({
       action: 'start',
       sessionId,
       scenario,
-      initialState: lessonState
+      initialState: lessonState,
+      autoPersist
     });
 
     // Expose inspection & automation hooks on window for test agents and subagents
@@ -235,6 +238,14 @@
     win.__GABO_MESSAGES__ = () => messages;
     win.__GABO_GET_TRACE__ = async () => {
       const res = await fetch(`/api/trace?sessionId=${sessionId}`);
+      return await res.json();
+    };
+    win.__GABO_PERSIST_TRACE__ = async () => {
+      const res = await fetch('/api/trace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'persist', sessionId })
+      });
       return await res.json();
     };
     win.__GABO_EVALUATE__ = async () => {
