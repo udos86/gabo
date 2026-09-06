@@ -125,7 +125,7 @@
       "description": "the outdoor terrace is completely full this morning; if the guest requests outdoor seating, the waiter must inform them it is full",
       "extraObjective": "accept a table inside instead, or politely ask to wait",
       "rubric": "The student adapts to the terrace being full by accepting an inside table or politely asking to wait.",
-      "probability": 1,
+      "probability": 0.5,
       "avgTurnCost": 2
     }
   ],
