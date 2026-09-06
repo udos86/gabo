@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
-  import { Experimental_StructuredObject, type UIMessage } from '@ai-sdk/svelte';
+  import { StructuredObject, type UIMessage } from '@ai-sdk/svelte';
 
   import { convertToDialogue } from '$lib/ai/actor';
   import { buildDirectorInput } from '$lib/ai/director';
@@ -9,6 +9,7 @@
   import { createInitialState, reduce } from '$lib/scenario/reducer';
   import { directorOutputSchema, type LessonState } from '$lib/scenario/state';
   import { Resolver } from '$lib/utils/resolver';
+  import type { TraceAction } from '$lib/trace/types';
 
   import type { PageProps } from './$types';
 
@@ -21,6 +22,19 @@
 
   const scenario = $derived(data.scenario);
 
+  const LANGUAGE_BCP47: Record<string, string> = {
+    french: 'fr-FR',
+    english: 'en-US',
+    spanish: 'es-ES',
+    german: 'de-DE',
+    italian: 'it-IT',
+    japanese: 'ja-JP',
+    chinese: 'zh-CN',
+    mandarin: 'zh-CN',
+  };
+
+  const languageCode = $derived(LANGUAGE_BCP47[scenario.language?.toLowerCase() ?? ''] ?? scenario.language ?? 'fr-FR');
+
   let sessionId = $state(globalThis.crypto.randomUUID());
   let messages = $state<Array<GaboUIMessage>>([]);
   let lessonState = $state<LessonState | null>(null);
@@ -32,17 +46,15 @@
   let isAnimating = $derived(animatedMessage !== undefined);
 
   let animationResolver: Resolver<void> | null = null;
-  let structuredObjects = new SvelteMap<string, Experimental_StructuredObject<typeof actorOutputSchema>>();
+  let structuredObjects = new SvelteMap<string, StructuredObject<typeof actorOutputSchema>>();
 
   const isFinished = $derived(lessonState !== null && lessonState.status !== 'in_progress');
-
-  import type { TraceAction } from '$lib/trace/types';
 
   function syncTrace(payload: TraceAction) {
     void fetch('/api/trace', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     }).catch((err) => {
       console.error('[Trace Sync Error]:', err);
     });
@@ -54,7 +66,6 @@
       .map((character) => character.role);
   }
 
-  /** The hidden Director senses milestone deltas and authors the NPC's next stage directions. */
   function runDirectorTurn(studentInput: string) {
     if (lessonState === null) return;
 
@@ -63,10 +74,10 @@
     const input = {
       ...buildDirectorInput(scenario, lessonState, dialogue, studentInput),
       sessionId,
-      turnIndex: currentTurn
+      turnIndex: currentTurn,
     };
 
-    const director = new Experimental_StructuredObject({
+    const director = new StructuredObject({
       api: '/api/agent/director',
       schema: directorOutputSchema,
       onFinish: async ({ object }) => {
@@ -75,22 +86,10 @@
         // The reducer is the sole authority: it validates the Director's proposals.
         lessonState = reduce(lessonState, scenario, object);
 
-        // Sync reduced state to trace
-        syncTrace({
-          action: 'reduce',
-          sessionId,
-          turnIndex: currentTurn,
-          state: lessonState
-        });
+        syncTrace({ action: 'reduce', sessionId, turnIndex: currentTurn, state: lessonState });
 
-        // If scenario finished, finalize trace session
         if (lessonState.status !== 'in_progress') {
-          syncTrace({
-            action: 'finish',
-            sessionId,
-            status: lessonState.status,
-            finalState: lessonState
-          });
+          syncTrace({ action: 'finish', sessionId, status: lessonState.status, finalState: lessonState });
         }
 
         runActorTurn(object.stageDirections, currentTurn);
@@ -116,7 +115,7 @@
     };
     messages.push(pending);
 
-    const actor = new Experimental_StructuredObject({
+    const actor = new StructuredObject({
       api: '/api/agent/actor',
       schema: actorOutputSchema,
       onFinish: async ({ object }) => {
@@ -219,40 +218,33 @@
   onMount(() => {
     lessonState = createInitialState(scenario);
 
-    const autoPersist = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('autoPersist') === 'true';
-
+    const autoPersist = 'location' in globalThis && new URLSearchParams(globalThis.location.search).get('autoPersist') === 'true';
     // Initialize session in trace store
-    syncTrace({
-      action: 'start',
-      sessionId,
-      scenario,
-      initialState: lessonState,
-      autoPersist
-    });
+    syncTrace({ action: 'start', sessionId, scenario, initialState: lessonState, autoPersist });
 
     // Expose inspection & automation hooks on window for test agents and subagents
-    const win = globalThis as unknown as Record<string, unknown>;
-    win.__GABO_SESSION_ID__ = sessionId;
-    win.__GABO_IS_ANIMATING__ = () => isAnimating;
-    win.__GABO_LESSON_STATE__ = () => lessonState;
-    win.__GABO_MESSAGES__ = () => messages;
-    win.__GABO_GET_TRACE__ = async () => {
+    const window = globalThis as unknown as Record<string, unknown>;
+    window.__GABO_SESSION_ID__ = sessionId;
+    window.__GABO_IS_ANIMATING__ = () => isAnimating;
+    window.__GABO_LESSON_STATE__ = () => lessonState;
+    window.__GABO_MESSAGES__ = () => messages;
+    window.__GABO_GET_TRACE__ = async () => {
       const res = await fetch(`/api/trace?sessionId=${sessionId}`);
       return await res.json();
     };
-    win.__GABO_PERSIST_TRACE__ = async () => {
+    window.__GABO_PERSIST_TRACE__ = async () => {
       const res = await fetch('/api/trace', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'persist', sessionId })
+        body: JSON.stringify({ action: 'persist', sessionId }),
       });
       return await res.json();
     };
-    win.__GABO_EVALUATE__ = async () => {
+    window.__GABO_EVALUATE__ = async () => {
       const res = await fetch('/api/trace/judge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId })
+        body: JSON.stringify({ sessionId }),
       });
       return await res.json();
     };
@@ -274,4 +266,4 @@
   {/each}
 </ul>
 
-<ChatInput bind:value={chatInput} disabled={isFinished} onSubmit={(event) => onSubmit(event)} />
+<ChatInput bind:value={chatInput} disabled={isFinished} language={languageCode} onSubmit={(event) => onSubmit(event)} />
