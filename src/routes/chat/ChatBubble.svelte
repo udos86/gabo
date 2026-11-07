@@ -1,6 +1,6 @@
 <script lang="ts">
   import { fade, fly } from 'svelte/transition';
-  import type { GaboUIMessage, UserMessageMetadata } from '$lib/ai/schema';
+  import type { AssistantMessageMetadata, GaboUIMessage, UserMessageMetadata } from '#lib/ai/schema';
 
   interface Props {
     message: GaboUIMessage;
@@ -23,7 +23,7 @@
   const isUser = $derived(message.role === 'user');
   const userMeta = $derived(message.role === 'user' ? (message.metadata as UserMessageMetadata) : undefined);
   const isAssistant = $derived(message.role === 'assistant');
-  const assistantMeta = $derived(message.role === 'assistant' ? (message.metadata as import('$lib/ai/schema').AssistantMessageMetadata) : undefined);
+  const assistantMeta = $derived(message.role === 'assistant' ? (message.metadata as AssistantMessageMetadata) : undefined);
   const avatarSrc = $derived(message.role === 'assistant' && message.metadata.agent === 'actor' ? '/waiter.png' : '/teacher.png');
 
   const bubbleClass = $derived.by(() => {

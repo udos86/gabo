@@ -58,7 +58,7 @@ Confirm creation of the synthesized cohort report at `traces/meta_report_<timest
 Direct `trace-remediator` to ingest the newly created meta-report and execute:
 1. **Report Extraction (Phase 1):** Identify recurring behavioral patterns (`[HIGH]`, `[MEDIUM]`), drop-off points, and prioritized prompt suggestions.
 2. **Implementation (Phases 2 & 3):** Apply targeted modifications to scenario rubrics (`cafe-001.json`), Director (`director.ts`), Actor (`actor.ts`), or Reducer (`reducer.ts`).
-3. **Verification Gate (Phase 4):** Verify stability with `npm run check` and `npm run test:unit`.
+3. **Verification Gate (Phase 4):** Conserve newly discovered edge cases in `src/lib/ai/golden-turns.json` and verify stability with `npm run check`, `npm run test:unit -- --run`, and `npm run test:eval`.
 4. **Cohort Cleanup (Phase 5):** Execute `npm run test:clean` to prune the audited cohort traces and reports.
 
 ---

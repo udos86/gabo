@@ -1,11 +1,11 @@
 import { createOpenAI } from "@ai-sdk/openai";
 
 import { OPENAI_API_KEY, TEACHER_MODEL, MOCK_LLM } from '$env/static/private';
-import { runTeacherAgent } from "$lib/ai/teacher";
+import { runTeacherAgent } from "#lib/ai/teacher";
 import { Output, simulateReadableStream, streamText, createTextStreamResponse, toTextStream } from "ai";
 import { MockLanguageModelV3 } from "ai/test";
-import { teacherOutputSchema, type TeacherAgentInput } from "$lib/ai/schema.js";
-import type { WithTraceMeta } from "$lib/trace/types";
+import { teacherOutputSchema, type TeacherAgentInput } from "#lib/ai/schema";
+import type { WithTraceMeta } from "#lib/trace/types";
 
 const openai = createOpenAI({ apiKey: OPENAI_API_KEY });
 

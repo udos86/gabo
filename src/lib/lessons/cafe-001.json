@@ -59,7 +59,7 @@
       "prerequisites": [
         "request_table"
       ],
-      "rubric": "The student expresses a clear preference to sit inside or outside, or adapts politely if their preferred option is unavailable.",
+      "rubric": "The student expresses a clear preference to sit inside or outside, accepts the waiter's proposed table inside, or adapts politely if their preferred option is unavailable.",
       "fillsSlots": [
         "seating_preference"
       ],

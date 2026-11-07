@@ -1,0 +1,358 @@
+[
+  {
+    "id": "turn2-combined-greet-and-table",
+    "description": "Student greets the waiter and requests a table for one in a single utterance (Regression guard for commit eaf8f52 / trace 297acbb5 Turn 2).",
+    "scenarioId": "cafe-001",
+    "state": {
+      "scenarioId": "cafe-001",
+      "turn": 2,
+      "maxTurns": 9,
+      "variables": {
+        "waiter_mood": "elegant and reserved",
+        "cafe_busyness": "pleasantly busy"
+      },
+      "milestones": {
+        "greet": "active",
+        "request_table": "locked",
+        "choose_location": "locked",
+        "get_seated": "locked",
+        "order": "locked",
+        "smalltalk": "locked"
+      },
+      "slots": {},
+      "worldFacts": {},
+      "activeFrictions": [],
+      "resolvedFrictions": [],
+      "focusMilestoneId": "greet",
+      "attempts": {
+        "greet": 1,
+        "request_table": 0,
+        "choose_location": 0,
+        "get_seated": 0,
+        "order": 0,
+        "smalltalk": 0
+      },
+      "pendingCompletions": [],
+      "offTopicStreak": 0,
+      "mode": "advance",
+      "pendingNpcAction": null,
+      "status": "in_progress"
+    },
+    "dialogue": "Waiter: Bonjour, monsieur. Bienvenue dans notre café. Comment puis-je vous aider ce matin ?\nTourist: Bonjour Monsieur, auriez vous une table pour une personne?",
+    "studentInput": "Bonjour Monsieur, auriez vous une table pour une personne?",
+    "expect": {
+      "completedMilestonesIncludes": ["greet", "request_table"],
+      "filledSlots": {
+        "party_size": "1|une"
+      }
+    }
+  },
+  {
+    "id": "turn3-accept-inside-assumption",
+    "description": "Student politely accepts the waiter's npcAssumption of being led to an inside table without stating an explicit location word.",
+    "scenarioId": "cafe-001",
+    "state": {
+      "scenarioId": "cafe-001",
+      "turn": 3,
+      "maxTurns": 9,
+      "variables": {
+        "waiter_mood": "elegant and reserved",
+        "cafe_busyness": "pleasantly busy"
+      },
+      "milestones": {
+        "greet": "done",
+        "request_table": "done",
+        "choose_location": "active",
+        "get_seated": "locked",
+        "order": "locked",
+        "smalltalk": "eligible"
+      },
+      "slots": {
+        "party_size": {
+          "value": "1",
+          "turn": 2
+        }
+      },
+      "worldFacts": {},
+      "activeFrictions": [],
+      "resolvedFrictions": [],
+      "focusMilestoneId": "choose_location",
+      "attempts": {
+        "greet": 0,
+        "request_table": 0,
+        "choose_location": 0,
+        "get_seated": 0,
+        "order": 0,
+        "smalltalk": 0
+      },
+      "pendingCompletions": [],
+      "offTopicStreak": 0,
+      "mode": "advance",
+      "pendingNpcAction": null,
+      "status": "in_progress"
+    },
+    "dialogue": "Waiter: Bonjour, monsieur. Bienvenue dans notre café. Comment puis-je vous aider ce matin ?\nTourist: Bonjour Monsieur, auriez vous une table pour une personne?\nWaiter: Bien sûr, monsieur. Suivez-moi à l'intérieur, s'il vous plaît.\nTourist: Merci beaucoup, je vous suis.",
+    "studentInput": "Merci beaucoup, je vous suis.",
+    "expect": {
+      "completedMilestonesIncludes": ["choose_location"]
+    }
+  },
+  {
+    "id": "turn3-explicit-outside-no-friction",
+    "description": "Student overrides the waiter's inside assumption and asks to sit outside when no friction is active.",
+    "scenarioId": "cafe-001",
+    "state": {
+      "scenarioId": "cafe-001",
+      "turn": 3,
+      "maxTurns": 9,
+      "variables": {
+        "waiter_mood": "cheerful and chatty",
+        "cafe_busyness": "pleasantly busy"
+      },
+      "milestones": {
+        "greet": "done",
+        "request_table": "done",
+        "choose_location": "active",
+        "get_seated": "locked",
+        "order": "locked",
+        "smalltalk": "eligible"
+      },
+      "slots": {
+        "party_size": {
+          "value": "1",
+          "turn": 2
+        }
+      },
+      "worldFacts": {},
+      "activeFrictions": [],
+      "resolvedFrictions": [],
+      "focusMilestoneId": "choose_location",
+      "attempts": {
+        "greet": 0,
+        "request_table": 0,
+        "choose_location": 0,
+        "get_seated": 0,
+        "order": 0,
+        "smalltalk": 0
+      },
+      "pendingCompletions": [],
+      "offTopicStreak": 0,
+      "mode": "advance",
+      "pendingNpcAction": null,
+      "status": "in_progress"
+    },
+    "dialogue": "Waiter: Bonjour, monsieur. Bienvenue dans notre café. Comment puis-je vous aider ce matin ?\nTourist: Bonjour, je voudrais une table pour une personne.\nWaiter: Avec plaisir, suivez-moi à l'intérieur.\nTourist: En fait, je préférerais m'asseoir en terrasse, s'il vous plaît.",
+    "studentInput": "En fait, je préférerais m'asseoir en terrasse, s'il vous plaît.",
+    "expect": {
+      "completedMilestonesIncludes": ["choose_location"],
+      "filledSlots": {
+        "seating_preference": "outside|terrasse|ext"
+      }
+    }
+  },
+  {
+    "id": "turn4-request-outside-triggers-terrace-full-friction",
+    "description": "When terrace_full friction is active and student asks for an outside table, Director must NOT complete choose_location yet and must NOT hand over the menu (trace 297acbb5 Turn 4).",
+    "scenarioId": "cafe-001",
+    "state": {
+      "scenarioId": "cafe-001",
+      "turn": 4,
+      "maxTurns": 9,
+      "variables": {
+        "waiter_mood": "elegant and reserved",
+        "cafe_busyness": "pleasantly busy"
+      },
+      "milestones": {
+        "greet": "done",
+        "request_table": "done",
+        "choose_location": "active",
+        "get_seated": "locked",
+        "order": "locked",
+        "smalltalk": "eligible"
+      },
+      "slots": {
+        "party_size": {
+          "value": "1",
+          "turn": 3
+        }
+      },
+      "worldFacts": {},
+      "activeFrictions": ["terrace_full"],
+      "resolvedFrictions": [],
+      "focusMilestoneId": "choose_location",
+      "attempts": {
+        "greet": 0,
+        "request_table": 0,
+        "choose_location": 0,
+        "get_seated": 0,
+        "order": 0,
+        "smalltalk": 0
+      },
+      "pendingCompletions": [],
+      "offTopicStreak": 0,
+      "mode": "advance",
+      "pendingNpcAction": null,
+      "status": "in_progress"
+    },
+    "dialogue": "Waiter: Bonjour, monsieur. Bienvenue dans notre café. Comment puis-je vous aider ce matin ?\nTourist: Bonjour Monsieur, auriez vous une table pour une personne?\nWaiter: Bien sûr, suivez-moi, s'il vous plaît.\nTourist: Merci beaucoup\nWaiter: Voici votre table, monsieur. Je vous présente notre carte. Prenez votre temps pour choisir, je reviens vous voir sous peu.\nTourist: Serait-ce possible, exchanger la table? Je voudrais une table a l'exterieur.",
+    "studentInput": "Serait-ce possible, exchanger la table? Je voudrais une table a l'exterieur.",
+    "expect": {
+      "completedMilestonesExcludes": ["choose_location", "get_seated"],
+      "stageDirectionsMustNotMatch": ["present.*menu", "présente.*carte", "hand.*menu"]
+    }
+  },
+  {
+    "id": "turn5-adapt-to-terrace-full-colloquial",
+    "description": "After waiter explains terrace is full and proposes staying inside, student's brief acceptance ('Ce n'est pas mal.' / 'D'accord, ça me va.') completes choose_location (trace 297acbb5 Turn 5).",
+    "scenarioId": "cafe-001",
+    "state": {
+      "scenarioId": "cafe-001",
+      "turn": 5,
+      "maxTurns": 9,
+      "variables": {
+        "waiter_mood": "elegant and reserved",
+        "cafe_busyness": "pleasantly busy"
+      },
+      "milestones": {
+        "greet": "done",
+        "request_table": "done",
+        "choose_location": "active",
+        "get_seated": "locked",
+        "order": "locked",
+        "smalltalk": "eligible"
+      },
+      "slots": {
+        "party_size": {
+          "value": "1",
+          "turn": 3
+        }
+      },
+      "worldFacts": {},
+      "activeFrictions": ["terrace_full"],
+      "resolvedFrictions": [],
+      "focusMilestoneId": "choose_location",
+      "attempts": {
+        "greet": 0,
+        "request_table": 0,
+        "choose_location": 1,
+        "get_seated": 0,
+        "order": 0,
+        "smalltalk": 0
+      },
+      "pendingCompletions": [],
+      "offTopicStreak": 0,
+      "mode": "advance",
+      "pendingNpcAction": null,
+      "status": "in_progress"
+    },
+    "dialogue": "Waiter: Bonjour, monsieur. Bienvenue dans notre café. Comment puis-je vous aider ce matin ?\nTourist: Bonjour Monsieur, auriez vous une table pour une personne?\nWaiter: Bien sûr, suivez-moi, s'il vous plaît.\nTourist: Merci beaucoup\nWaiter: Voici votre table, monsieur. Je vous présente notre carte. Prenez votre temps pour choisir, je reviens vous voir sous peu.\nTourist: Serait-ce possible, exchanger la table? Je voudrais une table a l'exterieur.\nWaiter: Je suis désolé, monsieur, mais notre terrasse extérieure est comble ce matin. Je vous propose plutôt de rester à l'intérieur. Suivez-moi, je vais vous ramener à votre table à l'intérieur.\nTourist: Ce n'est pas mal.",
+    "studentInput": "Ce n'est pas mal.",
+    "expect": {
+      "completedMilestonesIncludes": ["choose_location"]
+    }
+  },
+  {
+    "id": "turn2-greet-with-optional-smalltalk",
+    "description": "Student greets the waiter and makes a remark about the autumn weather in Paris, completing both greet and optional smalltalk.",
+    "scenarioId": "cafe-001",
+    "state": {
+      "scenarioId": "cafe-001",
+      "turn": 2,
+      "maxTurns": 9,
+      "variables": {
+        "waiter_mood": "warm and grandfatherly",
+        "cafe_busyness": "quiet and calm"
+      },
+      "milestones": {
+        "greet": "active",
+        "request_table": "locked",
+        "choose_location": "locked",
+        "get_seated": "locked",
+        "order": "locked",
+        "smalltalk": "locked"
+      },
+      "slots": {},
+      "worldFacts": {},
+      "activeFrictions": [],
+      "resolvedFrictions": [],
+      "focusMilestoneId": "greet",
+      "attempts": {
+        "greet": 1,
+        "request_table": 0,
+        "choose_location": 0,
+        "get_seated": 0,
+        "order": 0,
+        "smalltalk": 0
+      },
+      "pendingCompletions": [],
+      "offTopicStreak": 0,
+      "mode": "advance",
+      "pendingNpcAction": null,
+      "status": "in_progress"
+    },
+    "dialogue": "Waiter: Bonjour, monsieur. Bienvenue dans notre café. Comment puis-je vous aider ce matin ?\nTourist: Bonjour monsieur ! Il fait un temps magnifique ce matin, les couleurs d'automne sont superbes.",
+    "studentInput": "Bonjour monsieur ! Il fait un temps magnifique ce matin, les couleurs d'automne sont superbes.",
+    "expect": {
+      "completedMilestonesIncludes": ["greet", "smalltalk"]
+    }
+  },
+  {
+    "id": "turn6-order-food-and-drink",
+    "description": "Student orders both a drink and a food item politely after being seated, completing order and filling both slots.",
+    "scenarioId": "cafe-001",
+    "state": {
+      "scenarioId": "cafe-001",
+      "turn": 6,
+      "maxTurns": 9,
+      "variables": {
+        "waiter_mood": "elegant and reserved",
+        "cafe_busyness": "pleasantly busy"
+      },
+      "milestones": {
+        "greet": "done",
+        "request_table": "done",
+        "choose_location": "done",
+        "get_seated": "done",
+        "order": "active",
+        "smalltalk": "eligible"
+      },
+      "slots": {
+        "party_size": {
+          "value": "1",
+          "turn": 2
+        },
+        "seating_preference": {
+          "value": "inside",
+          "turn": 3
+        }
+      },
+      "worldFacts": {},
+      "activeFrictions": [],
+      "resolvedFrictions": [],
+      "focusMilestoneId": "order",
+      "attempts": {
+        "greet": 0,
+        "request_table": 0,
+        "choose_location": 0,
+        "get_seated": 0,
+        "order": 0,
+        "smalltalk": 0
+      },
+      "pendingCompletions": [],
+      "offTopicStreak": 0,
+      "mode": "advance",
+      "pendingNpcAction": null,
+      "status": "in_progress"
+    },
+    "dialogue": "Waiter: Voici votre table et la carte, monsieur. Prenez votre temps.\nTourist: Merci beaucoup. Je voudrais un café au lait et un croissant, s'il vous plaît.",
+    "studentInput": "Merci beaucoup. Je voudrais un café au lait et un croissant, s'il vous plaît.",
+    "expect": {
+      "completedMilestonesIncludes": ["order"],
+      "filledSlots": {
+        "drink_order": "café",
+        "food_order": "croissant"
+      }
+    }
+  }
+]
+

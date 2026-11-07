@@ -53,14 +53,20 @@ Apply the necessary modifications using file edit tools:
 - Adjust Actor behavioral guidelines in `actor.ts`.
 - Enhance reducer logic or friction specifications if state tracking is involved.
 
-### Phase 4: Verification Gate
+### Phase 4: Verification Gate & Golden-Turn Conservation
 Always verify the changes before proceeding to trace cleanup:
+1. **Conserve Resolved Edge Cases as Golden Turns**:
+   - When remediating a sensing or stage-direction defect from a session trace, extract the problematic turn into [`src/lib/ai/golden-turns.json`](file:///Users/udo/Developer/gabo/src/lib/ai/golden-turns.json) (using `npm run test:eval -- --extract=<sessionId> --turn=<turnIndex>`) so the fix is permanently guarded against future regressions even after cohort traces are cleaned up.
+2. **Run Verification Suite**:
 ```bash
 # 1. Typecheck and Svelte check
 npm run check
 
-# 2. Unit tests (reducer, judge, traceStore)
-npm run test:unit
+# 2. Unit tests (reducer, judge, traceStore, director prompt guard)
+npm run test:unit -- --run
+
+# 3. Golden-Turn LLM Regression Suite (must pass 100%)
+npm run test:eval
 ```
 
 ### Phase 5: Cohort Trace Cleanup

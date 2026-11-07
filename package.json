@@ -3,6 +3,14 @@
 	"private": true,
 	"version": "0.0.1",
 	"type": "module",
+	"imports": {
+		"#lib/*.ts": "./src/lib/*.ts",
+		"#lib/*.js": "./src/lib/*.ts",
+		"#lib/*.json": "./src/lib/*.json",
+		"#lib/*.svelte": "./src/lib/*.svelte",
+		"#lib/*.svg": "./src/lib/*.svg",
+		"#lib/*": "./src/lib/*.ts"
+	},
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
@@ -13,6 +21,7 @@
 		"lint": "eslint .",
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run",
+		"test:eval": "node --experimental-strip-types scripts/eval-golden-turns.ts",
 		"test:agent": "node --experimental-strip-types scripts/test-agent.ts",
 		"test:analyze": "node --experimental-strip-types scripts/analyze-traces.ts",
 		"test:clean": "node --experimental-strip-types scripts/clean-cohort.ts",

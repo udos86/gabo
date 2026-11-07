@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
-import { traceStore } from '$lib/server/traceStore';
-import { traceActionSchema } from '$lib/trace/types';
+import { traceStore } from '#lib/server/traceStore';
+import { traceActionSchema } from '#lib/trace/types';
 
 export async function GET({ url }) {
   const sessionId = url.searchParams.get('sessionId');

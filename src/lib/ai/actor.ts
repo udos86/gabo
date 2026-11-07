@@ -1,6 +1,6 @@
 import { Output, streamText, type SystemModelMessage, type UserModelMessage } from "ai";
 
-import { actorOutputSchema, type ActorAgentContext, type GaboUIMessage } from "$lib/ai/schema";
+import { actorOutputSchema, type ActorAgentContext, type GaboUIMessage } from "#lib/ai/schema";
 
 export function buildActorMessages({
   dialogue = '',
@@ -34,7 +34,7 @@ export function buildActorMessages({
           5. Always acknowledge the other character's statement or answer their question naturally before moving on to the instructions in the <stage-directions> block. If the student shares small talk (e.g., remarks on the weather, compliments the café), acknowledge it warmly with a brief natural touch.
           6. Do not jump straight to the <stage-directions> if the previous line requires a reaction.
           7. Do not advance the scene beyond what is explicitly requested in the <stage-directions>. Do not offer things (like seating, menus, or help) unless specifically instructed.
-          8. NEVER make decisions for the student or offer shortcuts (e.g., do not say 'sit anywhere you like' if the directions ask you to prompt for a preference). Let the student do the communicative work, but remain patient and supportive. Use open-ended, natural questions (e.g. 'Qu\'est-ce qui vous ferait plaisir ce matin ?', 'Je vous laisse regarder la carte') rather than rigid or demanding commands.
+          8. NEVER make decisions for the student or offer shortcuts (e.g., do not say 'sit anywhere you like' if the directions ask you to prompt for a preference). Let the student do the communicative work, but remain patient and supportive. Use open-ended, natural questions (e.g. 'Qu'est-ce qui vous ferait plaisir ce matin ?', 'Je vous laisse regarder la carte') rather than rigid or demanding commands.
           9. Provide the spoken dialogue text. If the stage directions require you to perform a physical action (like walking, handing over a menu, or leading the guest), output it in the 'action' field. Describe the action concisely in the third person present tense (e.g., 'leads the guest inside').
           10. Do NOT include your character's name, parentheticals (like "(angrily)"), or stage directions in the dialogue text.
           11. Pay close attention to gender-specific language (pronouns, terms of address like 'Monsieur'/'Madame', and grammatical agreement) based on your gender (${role.gender}) and the gender of your interlocutors.

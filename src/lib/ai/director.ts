@@ -1,8 +1,8 @@
 import { Output, streamText, type SystemModelMessage, type UserModelMessage } from 'ai';
 
-import type { AgentContext, CharacterRoleInput } from '$lib/ai/schema';
-import { directorOutputSchema, type LessonState } from '$lib/scenario/state';
-import type { FrictionDef, MilestoneDef, Scenario } from '$lib/scenario/scenario';
+import type { AgentContext, CharacterRoleInput } from '#lib/ai/schema';
+import { directorOutputSchema, type LessonState } from '#lib/scenario/state';
+import type { FrictionDef, MilestoneDef, Scenario } from '#lib/scenario/scenario';
 
 export interface DirectorMilestoneView {
   id: string;
@@ -57,7 +57,7 @@ function effectiveRubric(milestone: MilestoneDef, frictions: FrictionDef[], acti
   );
   if (attached.length === 0) return milestone.rubric;
   const extra = attached.map((friction) => friction.extraObjective).join(' AND ');
-  return `To complete this milestone, the student MUST ${extra}. If they have not done this yet, it is INCOMPLETE. Do NOT mark as completed until they fulfill this requirement. (Original goal: ${milestone.rubric})`;
+  return `To complete this milestone, the student MUST ${extra}. If the NPC has not yet informed them of the obstacle, it is INCOMPLETE. Do NOT mark as completed until they fulfill this requirement. Once the NPC has explained the obstacle and offered the alternative in dialogue, any brief, polite, or colloquial acceptance from the student (e.g. 'd'accord', 'merci', 'ce n'est pas mal') fulfills this requirement and MUST be marked completed. (Original goal: ${milestone.rubric})`;
 }
 
 /**
@@ -164,8 +164,8 @@ export function buildDirectorMessages(input: DirectorAgentInput): { systemMessag
           - Established world facts (already true — NEVER contradict): ${JSON.stringify(worldFacts)}
           - Current turn ${turn} of ${maxTurns}. Directing mode: ${mode}. ${MODE_GUIDANCE[mode]}
 
-          MILESTONES (authoritative status — obey it):
-          ${milestones.map((m) => `- [${m.status}]${m.optional ? ' (optional)' : ''} ${m.id} (${m.kind}): ${m.objective} — completion: ${m.effectiveRubric}${m.fillsSlots.length > 0 ? ` — fills slots: ${m.fillsSlots.join(', ')}` : ''}${m.npcAssumption ? ` — npcAssumption: ${m.npcAssumption}` : ''}`).join('\n')}
+          MILESTONES (any milestone that is not 'done' can be completed on this turn, even if 'locked' or 'optional' — report ONLY the exact milestone id in quotes):
+          ${milestones.map((m) => `- "${m.id}" [status: ${m.status}${m.optional ? ', optional' : ''}, kind: ${m.kind}]: ${m.objective} — completion: ${m.effectiveRubric}${m.fillsSlots.length > 0 ? ` — fills slots: ${m.fillsSlots.join(', ')}` : ''}${m.npcAssumption ? ` — npcAssumption: ${m.npcAssumption}` : ''}`).join('\n')}
           Focus milestone: ${focusMilestoneId ?? 'none'}.
 
           SLOTS (facts to capture from the student when mentioned — use these EXACT ids):
@@ -174,10 +174,13 @@ export function buildDirectorMessages(input: DirectorAgentInput): { systemMessag
           ${activeFrictions.length > 0 ? `ACTIVE FRICTIONS (weave in naturally; the NPC imposes these obstacles):\n${activeFrictions.map((f) => `- ${f.id}: ${f.description} → student must ${f.extraObjective}`).join('\n')}` : 'No active frictions.'}
 
           RULES:
-          1. SENSING (observedDeltas): Evaluate the student's input against ALL milestones that are not 'done' (including both 'locked' and '(optional)' milestones, regardless of what the current focus milestone is). If the student's input satisfies a milestone's completion criteria, you MUST report it in completedMilestones immediately. If a student fulfills an optional milestone (e.g. making small talk about the weather or café) alongside their primary action, you MUST report both milestones in completedMilestones in this same turn without delay. Never withhold or ignore completions because a milestone is optional, non-focus, or locked; the system safely buffers and records all completions.
+          1. SENSING (observedDeltas): Evaluate the student's input against ALL milestones that are not 'done' (including both 'locked' and '(optional)' milestones, regardless of what the current focus milestone is). If the student's input satisfies a milestone's completion criteria, you MUST report it in completedMilestones immediately.
+             - If a student's single utterance fulfills multiple milestones at once (e.g., greeting and requesting a table together), you MUST report ALL satisfied milestones in completedMilestones in this same turn without delay.
+             - If a student fulfills an optional milestone (e.g. making small talk about the weather, autumn colours, or the café) alongside their primary action, you MUST report BOTH the primary milestone and the optional milestone (e.g. 'smalltalk') in completedMilestones in this same turn without delay.
+             - Whenever you fill a slot required by a milestone (e.g. party_size for request_table, or seating_preference for choose_location), verify whether that milestone's completion criteria are met and report it in completedMilestones in the same turn. Never withhold or ignore completions because a milestone is optional, non-focus, or locked; the system safely buffers and records all completions.
           2. AUTHORING (stageDirections): Direct the NPC to pursue the current 'active' or 'eligible' milestone. If your sensing (observedDeltas) reports that the student just completed a milestone, advance the scene toward the next logical milestone.
-             CRITICAL: Never direct the NPC to skip over uncompleted milestones. If the current milestone requires the student to provide information (e.g. seating preference), DO NOT skip it. If the milestone provides an 'npcAssumption', direct the NPC to act on that assumption INITIALLY. If the student contradicts or corrects the assumption, the NPC must adapt naturally (unless constrained by an active friction) and NOT repeat the assumption.
-          3. ACTIVE FRICTIONS ARE HARD CONSTRAINTS: When a friction is active (e.g. terrace_full), the NPC MUST enforce the obstacle. The NPC CANNOT grant a student request that contradicts an active friction (e.g., giving a table on a full terrace, or claiming one suddenly became available). Instead, the NPC must politely explain the constraint in character and guide the student toward the alternative specified in the friction's extraObjective (e.g. sitting inside or waiting). The student must satisfy this extraObjective to complete the milestone.
+             CRITICAL: Never direct the NPC to skip over uncompleted milestones, and keep stageDirections strictly synchronized with completedMilestones. Do NOT direct the NPC to advance to a later milestone (e.g. presenting the menu for get_seated) unless the prerequisite milestone (e.g. choose_location) is already 'done' or reported in completedMilestones this turn. Conversely, if the student has satisfied or adapted to the current milestone (such as accepting an inside table after hearing the terrace is full) and you direct the NPC to move on to the next stage, you MUST include that milestone in completedMilestones. If the milestone provides an 'npcAssumption', direct the NPC to act on that assumption INITIALLY. If the student contradicts or corrects the assumption, the NPC must adapt naturally (unless constrained by an active friction) and NOT repeat the assumption.
+          3. ${activeFrictions.length > 0 ? "ACTIVE FRICTIONS ARE HARD CONSTRAINTS: When a friction is active (e.g. terrace_full), the NPC MUST enforce the obstacle. The NPC CANNOT grant a student request that contradicts an active friction (e.g., giving a table on a full terrace, or claiming one suddenly became available). Instead, the NPC must politely explain the constraint in character and guide the student toward the alternative specified in the friction's extraObjective (e.g. sitting inside or waiting). The student must satisfy this extraObjective to complete the milestone." : "NO ACTIVE FRICTIONS: All options in the scenario (e.g. sitting inside or outside on the terrace) are available. Never invent obstacles or claim that an option is unavailable when there are no active frictions. If the student expresses a valid preference (even if it overrides an initial npcAssumption), grant it and report the milestone in completedMilestones immediately."}
           4. PACING & TRANSITIONS: Maintain natural narrative pacing between milestones. Do NOT rush multiple interaction stages into one breath. For example:
              - When moving to seating and menu presentation (get_seated), direct the NPC to seat the guest, present the menu, and invite them to take their time or suggest a house specialty.
              - Do NOT immediately demand food and drink orders before the guest has had a chance to settle and review the menu.

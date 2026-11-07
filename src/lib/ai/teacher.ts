@@ -1,6 +1,6 @@
 import { Output, streamText } from "ai";
 
-import { teacherOutputSchema, type TeacherAgentContext } from "$lib/ai/schema";
+import { teacherOutputSchema, type TeacherAgentContext } from "#lib/ai/schema";
 
 export async function runTeacherAgent({ actions, dialogue, input, interlocutors, language, model, role, slugline }: TeacherAgentContext) {
   return streamText({

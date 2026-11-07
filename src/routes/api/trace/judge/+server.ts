@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
-import { traceStore } from '$lib/server/traceStore';
-import { evaluateSession } from '$lib/server/judge';
-import type { SessionTrace } from '$lib/trace/types';
+import { traceStore } from '#lib/server/traceStore';
+import { evaluateSession } from '#lib/server/judge';
+import type { SessionTrace } from '#lib/trace/types';
 
 export async function POST({ request }) {
   try {

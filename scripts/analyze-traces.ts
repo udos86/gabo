@@ -3,7 +3,8 @@ import path from 'node:path';
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateText, Output } from 'ai';
 import { z } from 'zod';
-import type { JudgeReport, SessionTrace } from '../src/lib/trace/types.js';
+import type { JudgeReport, SessionTrace } from '#lib/trace/types';
+import { detectTraceInvariantViolations, evaluateSessionCore } from '#lib/server/judgeCore';
 
 // Load .env manually if needed
 function loadEnv() {
@@ -124,18 +125,27 @@ async function run() {
     const trace = JSON.parse(raw) as SessionTrace;
     console.log(`⏳ Processing Session: ${trace.sessionId} (${trace.scenarioId}, ${trace.turns.length} turns)...`);
 
-    let report: JudgeReport | null = null;
-    const reportPath = path.join(path.dirname(filePath), `report_${trace.sessionId}.md`);
+    const invariants = detectTraceInvariantViolations(trace);
+    if (invariants.length > 0) {
+      console.log(`  🚨 Detected ${invariants.length} deterministic invariant violation(s):`);
+      for (const inv of invariants) {
+        console.log(`     - [Turn ${inv.turnIndex ?? '?'}] [${inv.severity.toUpperCase()}] ${inv.description}`);
+      }
+    } else {
+      console.log(`  ✓ 0 deterministic invariant violations detected.`);
+    }
 
-    // If report already exists and is fresh, we can evaluate or fetch via endpoint
+    let report: JudgeReport | null = null;
+
     try {
-      report = await evaluateTraceViaApi(trace);
+      if (OPENAI_API_KEY) {
+        report = await evaluateSessionCore(trace, { apiKey: OPENAI_API_KEY, modelName: JUDGE_MODEL });
+      } else {
+        report = await evaluateTraceViaApi(trace);
+      }
       console.log(`  ✓ Evaluated: Score ${report.overallScore}/10 (Nat:${report.categoryScores.naturalness}, Cont:${report.categoryScores.continuity}, Sens:${report.categoryScores.sensingAccuracy}, Guid:${report.categoryScores.pedagogicalGuidance})`);
     } catch (err) {
-      console.warn(`  ⚠️ Could not evaluate via /api/trace/judge (${err instanceof Error ? err.message : String(err)}). Checking for cached report on disk...`);
-      if (fs.existsSync(reportPath)) {
-        console.log(`  ✓ Found cached report on disk: ${reportPath}`);
-      }
+      console.warn(`  ⚠️ Could not evaluate session (${err instanceof Error ? err.message : String(err)}).`);
     }
 
     if (report) {

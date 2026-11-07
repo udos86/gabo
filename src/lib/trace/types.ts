@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import type { ActorAgentInput, ActorOutput } from '$lib/ai/schema';
-import type { DirectorAgentInput } from '$lib/ai/director';
-import type { DirectorOutput, LessonState } from '$lib/scenario/state';
-import type { Scenario } from '$lib/scenario/scenario';
+import type { ActorAgentInput, ActorOutput } from '#lib/ai/schema';
+import type { DirectorAgentInput } from '#lib/ai/director';
+import type { DirectorOutput, LessonState } from '#lib/scenario/state';
+import type { Scenario } from '#lib/scenario/scenario';
 
 export interface LLMUsage {
   promptTokens: number;

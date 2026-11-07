@@ -2,11 +2,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { TraceStore } from './traceStore';
-import type { Scenario } from '$lib/scenario/scenario';
-import type { LessonState } from '$lib/scenario/state';
-import type { DirectorAgentInput } from '$lib/ai/director';
-import type { ActorAgentInput } from '$lib/ai/schema';
+import { TraceStore } from '#lib/server/traceStore';
+import type { Scenario } from '#lib/scenario/scenario';
+import type { LessonState } from '#lib/scenario/state';
+import type { DirectorAgentInput } from '#lib/ai/director';
+import type { ActorAgentInput } from '#lib/ai/schema';
 
 const mockScenario: Scenario = {
   id: 'test-scenario',

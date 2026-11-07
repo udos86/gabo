@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { LessonState } from '$lib/scenario/state';
-  import type { JudgeReport, SessionTrace } from '$lib/trace/types';
+  import type { LessonState } from '#lib/scenario/state';
+  import type { JudgeReport, SessionTrace } from '#lib/trace/types';
 
   interface Props {
     sessionId: string;

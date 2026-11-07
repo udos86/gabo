@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { FrictionId, MilestoneId, SlotId } from './scenario';
+import type { FrictionId, MilestoneId, SlotId } from '#lib/scenario/scenario';
 
 export type MilestoneStatus = 'locked' | 'eligible' | 'active' | 'done' | 'skipped';
 export type DirectorMode = 'advance' | 'repair' | 'pressure' | 'deflect';

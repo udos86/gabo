@@ -3,13 +3,13 @@
   import { SvelteMap } from 'svelte/reactivity';
   import { StructuredObject, type UIMessage } from '@ai-sdk/svelte';
 
-  import { convertToDialogue } from '$lib/ai/actor';
-  import { buildDirectorInput } from '$lib/ai/director';
-  import { actorOutputSchema, type AssistantMessageMetadata, type GaboUIMessage, type UserMessageMetadata } from '$lib/ai/schema';
-  import { createInitialState, reduce } from '$lib/scenario/reducer';
-  import { directorOutputSchema, type LessonState } from '$lib/scenario/state';
-  import { Resolver } from '$lib/utils/resolver';
-  import type { TraceAction } from '$lib/trace/types';
+  import { convertToDialogue } from '#lib/ai/actor';
+  import { buildDirectorInput } from '#lib/ai/director';
+  import { actorOutputSchema, type AssistantMessageMetadata, type GaboUIMessage, type UserMessageMetadata } from '#lib/ai/schema';
+  import { createInitialState, createSessionRng, reduce, type Rng } from '#lib/scenario/reducer';
+  import { directorOutputSchema, type LessonState } from '#lib/scenario/state';
+  import { Resolver } from '#lib/utils/resolver';
+  import type { TraceAction } from '#lib/trace/types';
 
   import type { PageProps } from './$types';
 
@@ -46,6 +46,7 @@
   let isAnimating = $derived(animatedMessage !== undefined);
 
   let animationResolver: Resolver<void> | null = null;
+  let sessionRng: Rng = Math.random;
   let structuredObjects = new SvelteMap<string, StructuredObject<typeof actorOutputSchema>>();
 
   const isFinished = $derived(lessonState !== null && lessonState.status !== 'in_progress');
@@ -84,7 +85,7 @@
         if (object === undefined || lessonState === null) return;
 
         // The reducer is the sole authority: it validates the Director's proposals.
-        lessonState = reduce(lessonState, scenario, object);
+        lessonState = reduce(lessonState, scenario, object, sessionRng);
 
         syncTrace({ action: 'reduce', sessionId, turnIndex: currentTurn, state: lessonState });
 
@@ -216,9 +217,14 @@
   });
 
   onMount(() => {
-    lessonState = createInitialState(scenario);
+    const searchParams = 'location' in globalThis ? new URLSearchParams(globalThis.location.search) : null;
+    sessionRng = createSessionRng({
+      seed: searchParams?.get('seed'),
+      friction: searchParams?.get('friction')
+    });
+    lessonState = createInitialState(scenario, sessionRng);
 
-    const autoPersist = 'location' in globalThis && new URLSearchParams(globalThis.location.search).get('autoPersist') === 'true';
+    const autoPersist = searchParams?.get('autoPersist') === 'true';
     // Initialize session in trace store
     syncTrace({ action: 'start', sessionId, scenario, initialState: lessonState, autoPersist });
 

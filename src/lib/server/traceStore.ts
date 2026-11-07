@@ -1,10 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Scenario } from '$lib/scenario/scenario';
-import type { LessonState, DirectorOutput } from '$lib/scenario/state';
-import type { DirectorAgentInput } from '$lib/ai/director';
-import type { ActorAgentInput, ActorOutput } from '$lib/ai/schema';
-import { normalizeUsage, type SessionTrace, type TurnTrace, type TraceEvent, type LLMCallTrace, type LLMUsage, type TraceMessage } from '$lib/trace/types';
+import type { Scenario } from '#lib/scenario/scenario';
+import type { LessonState, DirectorOutput } from '#lib/scenario/state';
+import type { DirectorAgentInput } from '#lib/ai/director';
+import type { ActorAgentInput, ActorOutput } from '#lib/ai/schema';
+import { normalizeUsage, type SessionTrace, type TurnTrace, type TraceEvent, type LLMCallTrace, type LLMUsage, type TraceMessage } from '#lib/trace/types';
 
 const TRACES_DIR = path.resolve(process.cwd(), 'traces');
 

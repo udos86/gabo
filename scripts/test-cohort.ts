@@ -1,7 +1,11 @@
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 
-const personas = ['polite', 'friction', 'terse'];
+const args = process.argv.slice(2);
+const fullCohort = args.includes('--full');
+const personas = fullCohort
+  ? ['polite', 'friction', 'terse', 'twist', 'fast_track']
+  : ['polite', 'friction', 'twist'];
 
 async function runPersona(persona: string): Promise<void> {
   console.log(`\n============================================================`);

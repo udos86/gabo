@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { characterRoleSchema } from '$lib/ai/schema';
+import { characterRoleSchema } from '#lib/ai/schema';
 
 export type MilestoneId = string;
 export type SlotId = string;

@@ -1,5 +1,5 @@
-import { deriveMaxTurns, type MilestoneDef, type MilestoneId, type Scenario } from './scenario';
-import type { DirectorOutput, LessonState, LessonStatus, MilestoneStatus } from './state';
+import { deriveMaxTurns, type MilestoneDef, type MilestoneId, type Scenario } from '#lib/scenario/scenario';
+import type { DirectorOutput, LessonState, LessonStatus, MilestoneStatus } from '#lib/scenario/state';
 
 /** Number of consecutive attempts on the focus milestone before switching to repair mode. */
 const REPAIR_ATTEMPT_THRESHOLD = 2;
@@ -7,6 +7,32 @@ const REPAIR_ATTEMPT_THRESHOLD = 2;
 const PRESSURE_RATIO = 0.75;
 
 export type Rng = () => number;
+
+/**
+ * Creates a deterministic or mode-controlled RNG for reproducible testing and friction control.
+ * - `friction: 'on'` -> always returns `0`, guaranteeing all non-zero probability frictions trigger.
+ * - `friction: 'off'` -> always returns `0.999999`, preventing optional frictions (probability < 1) from triggering.
+ * - `seed` -> deterministic Mulberry32 PRNG seeded from the string hash.
+ * - default -> `Math.random`.
+ */
+export function createSessionRng(options?: { seed?: string | null; friction?: string | null }): Rng {
+  if (options?.friction === 'on') return () => 0;
+  if (options?.friction === 'off') return () => 0.999999;
+  if (options?.seed) {
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < options.seed.length; i++) {
+      h = Math.imul(h ^ options.seed.charCodeAt(i), 16777619);
+    }
+    let state = h >>> 0;
+    return () => {
+      state = (state + 0x6d2b79f5) | 0;
+      let t = Math.imul(state ^ (state >>> 15), 1 | state);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  return Math.random;
+}
 
 /**
  * Constructs a lookup Map from milestone ID to its definition for fast O(1) resolution.

@@ -2,10 +2,10 @@ import { createTextStreamResponse, toTextStream } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 
 import { OPENAI_API_KEY, DIRECTOR_MODEL } from '$env/static/private';
-import { runDirectorAgent, type DirectorAgentInput } from '$lib/ai/director';
-import { traceStore, attachStreamTrace } from '$lib/server/traceStore';
-import type { WithTraceMeta } from '$lib/trace/types';
-import type { DirectorOutput } from '$lib/scenario/state';
+import { runDirectorAgent, type DirectorAgentInput } from '#lib/ai/director';
+import { traceStore, attachStreamTrace } from '#lib/server/traceStore';
+import type { WithTraceMeta } from '#lib/trace/types';
+import type { DirectorOutput } from '#lib/scenario/state';
 
 const openai = createOpenAI({ apiKey: OPENAI_API_KEY });
 

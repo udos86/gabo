@@ -15,8 +15,10 @@ This skill drives autonomous student playthroughs of interactive Gabo language l
 ## Supported Learner Personas
 
 - **`polite`** (Default): Cooperative, polite A2-B1 learner who answers questions politely and follows suggestions.
-- **`friction`**: Boundary tester who insists on preferred seating (e.g. terrace even when full), asks questions about the menu, and tests error handling.
+- **`friction`**: Boundary tester who insists on preferred seating (e.g. terrace even when full), asks questions about the menu, and tests error handling (defaults to `--friction=on`).
 - **`terse`**: Beginner A1 learner who speaks in short phrases ("Une table", "Dedans", "Un café").
+- **`twist`**: Indecisive learner who initially follows the waiter's assumption, then asks to switch to an outdoor table, and adapts with colloquial expressions ("Ce n'est pas mal") when the terrace is full (defaults to `--friction=on`).
+- **`fast_track`**: Fluent learner who combines multiple milestones in a single utterance (greeting + weather small talk + table request).
 
 ---
 
@@ -49,6 +51,15 @@ npm run test:agent -- --persona=friction
 
 # Play terse beginner session
 npm run test:agent -- --persona=terse
+
+# Play twist / mind-changer session (with deterministic friction=on)
+npm run test:agent -- --persona=twist
+
+# Play fast-track combined-milestone session
+npm run test:agent -- --persona=fast_track
+
+# Override friction mode ('on' | 'off') or deterministic seed
+npm run test:agent -- --persona=polite --friction=off --seed=42
 ```
 
 All session telemetry (student inputs, Director decisions, Reducer transitions, Actor lines, tokens, and latencies) is automatically persisted to `traces/<sessionId>.json`.

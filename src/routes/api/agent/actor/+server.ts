@@ -1,12 +1,12 @@
 import { createOpenAI } from '@ai-sdk/openai';
 
 import { OPENAI_API_KEY, ACTOR_MODEL, MOCK_LLM } from '$env/static/private';
-import { runActorAgent } from '$lib/ai/actor.js';
+import { runActorAgent } from '#lib/ai/actor';
 import { Output, simulateReadableStream, streamText, createTextStreamResponse, toTextStream } from 'ai';
 import { MockLanguageModelV3 } from 'ai/test';
-import { actorOutputSchema, type ActorAgentInput, type ActorOutput } from '$lib/ai/schema.js';
-import { traceStore, attachStreamTrace } from '$lib/server/traceStore';
-import type { WithTraceMeta } from '$lib/trace/types';
+import { actorOutputSchema, type ActorAgentInput, type ActorOutput } from '#lib/ai/schema';
+import { traceStore, attachStreamTrace } from '#lib/server/traceStore';
+import type { WithTraceMeta } from '#lib/trace/types';
 
 const openai = createOpenAI({ apiKey: OPENAI_API_KEY });
 

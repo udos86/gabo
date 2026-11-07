@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { deriveMaxTurns, scenarioSchema, type Scenario } from './scenario';
-import { createInitialState, reduce } from './reducer';
-import type { DirectorOutput } from './state';
+import { deriveMaxTurns, scenarioSchema, type Scenario } from '#lib/scenario/scenario';
+import { createInitialState, createSessionRng, reduce } from '#lib/scenario/reducer';
+import type { DirectorOutput } from '#lib/scenario/state';
 
 function buildScenario(overrides: Partial<Scenario> = {}): Scenario {
   return scenarioSchema.parse({
@@ -315,5 +315,16 @@ describe('friction', () => {
     });
     // 3 mandatory + 0.5*2 expected friction cost = 4; *1.5 = 6.
     expect(deriveMaxTurns(scenario)).toBe(6);
+  });
+
+  it('supports deterministic friction=on, friction=off, and seeded RNG via createSessionRng', () => {
+    const rngOn = createSessionRng({ friction: 'on' });
+    const rngOff = createSessionRng({ friction: 'off' });
+    const rngSeedA = createSessionRng({ seed: 'cohort-42' });
+    const rngSeedB = createSessionRng({ seed: 'cohort-42' });
+
+    expect(rngOn()).toBe(0);
+    expect(rngOff()).toBeGreaterThan(0.99);
+    expect([rngSeedA(), rngSeedA(), rngSeedA()]).toEqual([rngSeedB(), rngSeedB(), rngSeedB()]);
   });
 });

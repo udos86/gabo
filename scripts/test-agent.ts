@@ -1,36 +1,17 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { chromium } from 'playwright';
 import { createOpenAI } from '@ai-sdk/openai';
-import { generateText } from 'ai';
+import { generateText, Output } from 'ai';
 
-export interface JudgeFinding {
-  severity: string;
-  category: string;
-  description: string;
-  evidence?: string | null;
-  recommendation: string;
-}
-
-export interface PromptRecommendation {
-  target: string;
-  currentBehavior: string;
-  recommendedChange: string;
-}
-
-export interface JudgeReport {
-  overallScore: number;
-  categoryScores: {
-    naturalness: number;
-    continuity: number;
-    sensingAccuracy: number;
-    pedagogicalGuidance: number;
-  };
-  summary: string;
-  milestoneAnalysis: string;
-  findings: JudgeFinding[];
-  promptRecommendations?: PromptRecommendation[];
-}
+import { buildActorMessages } from '#lib/ai/actor';
+import { buildDirectorInput, buildDirectorMessages } from '#lib/ai/director';
+import { actorOutputSchema } from '#lib/ai/schema';
+import { createInitialState, createSessionRng, reduce } from '#lib/scenario/reducer';
+import { scenarioSchema } from '#lib/scenario/scenario';
+import { directorOutputSchema } from '#lib/scenario/state';
+import { detectTraceInvariantViolations, evaluateSessionCore } from '#lib/server/judgeCore';
+import { normalizeUsage, type JudgeReport, type SessionTrace, type TurnTrace } from '#lib/trace/types';
 
 // Load .env manually if needed
 function loadEnv() {
@@ -52,19 +33,26 @@ function loadEnv() {
 
 loadEnv();
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const STUDENT_MODEL = process.env.STUDENT_MODEL || process.env.ACTOR_MODEL || 'gpt-4o-mini';
-const BASE_URL = process.env.BASE_URL || 'http://localhost:5173/chat';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const DIRECTOR_MODEL = process.env.DIRECTOR_MODEL || 'gpt-4o-mini';
+const ACTOR_MODEL = process.env.ACTOR_MODEL || 'gpt-4o-mini';
+const STUDENT_MODEL = process.env.STUDENT_MODEL || ACTOR_MODEL || 'gpt-4o-mini';
 
 // Parse command line args
 const args = process.argv.slice(2);
 let persona = 'polite';
 let shouldJudge = false;
+let frictionMode: string | null = null;
+let seed: string | null = null;
 
 for (const arg of args) {
   if (arg.startsWith('--persona=')) {
     const p = arg.split('=')[1];
     if (p) persona = p;
+  } else if (arg.startsWith('--friction=')) {
+    frictionMode = arg.split('=')[1] ?? null;
+  } else if (arg.startsWith('--seed=')) {
+    seed = arg.split('=')[1] ?? null;
   } else if (arg === '--judge') {
     shouldJudge = true;
   } else if (arg === '--no-judge') {
@@ -72,10 +60,29 @@ for (const arg of args) {
   }
 }
 
+// Default deterministic friction behavior for friction/twist personas unless explicitly overridden
+if (frictionMode === null && (persona === 'friction' || persona === 'twist')) {
+  frictionMode = 'on';
+}
+
 const openai = createOpenAI({ apiKey: OPENAI_API_KEY });
 
 function getPersonaInstructions(personaType: string): string {
   switch (personaType) {
+    case 'twist':
+      return `
+You are playing a realistic, slightly indecisive tourist in a Parisian café (A2-B1 level).
+- In your first response (Turn 2), greet the waiter and ask for a table for one person without specifying inside or outside ("Bonjour Monsieur, auriez-vous une table pour une personne ?").
+- In your second response (Turn 3), when the waiter invites you to follow him inside or to your table, ask if you can switch to a table outside on the terrace instead ("Serait-ce possible d'échanger la table ? Je voudrais une table à l'extérieur.").
+- Once the waiter informs you that the outdoor terrace is full and suggests staying inside, accept using a brief colloquial expression ("Ce n'est pas mal, d'accord." or "Ce n'est pas mal.").
+- Once the waiter seats you and presents the menu, thank him and order a drink (un café au lait) and a pastry (un croissant).
+`;
+    case 'fast_track':
+      return `
+You are an enthusiastic, fluent tourist in a Parisian café who combines multiple conversational steps at once.
+- In your very first response, greet the waiter, make a brief remark about the lovely autumn morning weather, AND ask for a table for one person inside (e.g. "Bonjour monsieur ! Il fait un temps superbe ce matin, auriez-vous une table pour une personne à l'intérieur ?").
+- As soon as the waiter seats you and hands you the menu, thank him and immediately order a café au lait and a croissant in the same turn.
+`;
     case 'friction':
       return `
 You are playing the role of a slightly demanding or curious tourist in a Parisian café.
@@ -105,11 +112,6 @@ Your overarching goal:
   }
 }
 
-/**
- * Autonomous LLM-driven Student Agent.
- * Instead of static canned responses, this agent dynamically reacts to whatever
- * the Waiter actually said or asked, pursuing its overarching goal.
- */
 async function generateStudentResponse({
   latestWaiterLine,
   dialogueHistory,
@@ -129,8 +131,7 @@ ${personaInstructions}
 
 RULES FOR YOUR REACTION:
 - You must REACT DIRECTLY and naturally to what the waiter just said or asked.
-- Do NOT jump ahead to steps that haven't been prompted yet (e.g. do not order food before you are seated and have the menu).
-- If the waiter asks a question (e.g. inside or outside? how many people?), answer that question directly.
+- Follow your persona's turn-by-turn plan carefully.
 - Speak in natural French matching your learner persona.
 - Output ONLY your spoken French line. No quotes, no stage directions, no English explanations.
 `;
@@ -153,197 +154,251 @@ What do you reply next as the tourist? Provide only the spoken French sentence.`
   return text.trim().replace(/^["']|["']$/g, '');
 }
 
-async function run() {
-  console.log(`\n🤖 Launching Autonomous Dynamic Student Test Agent...`);
-  console.log(`Persona: ${persona}`);
-  console.log(`Student Model: ${STUDENT_MODEL}`);
-  console.log(`Target URL: ${BASE_URL}\n`);
+function printJudgeReport(sessionId: string, report: JudgeReport) {
+  console.log(`\n============================================================`);
+  console.log(`🏆 GABO SESSION EVALUATION REPORT (DYNAMIC AGENT RUN)`);
+  console.log(`============================================================`);
+  console.log(`Overall Score: ${report.overallScore} / 10`);
+  console.log(`- Naturalness & Immersion:  ${report.categoryScores.naturalness} / 10`);
+  console.log(`- Continuity & Consistency: ${report.categoryScores.continuity} / 10`);
+  console.log(`- Sensing Accuracy:         ${report.categoryScores.sensingAccuracy} / 10`);
+  console.log(`- Pedagogical Guidance:     ${report.categoryScores.pedagogicalGuidance} / 10`);
+  console.log(`\nSummary:\n${report.summary}`);
+  console.log(`\nMilestone Analysis:\n${report.milestoneAnalysis}`);
+  console.log(`\nFindings (${report.findings.length}):`);
+  for (const finding of report.findings) {
+    console.log(`  [${finding.severity.toUpperCase()}] [${finding.category}] (Turn ${finding.turnIndex ?? 'all'}) ${finding.description}`);
+    if (finding.evidence) console.log(`  * Evidence: "${finding.evidence}"`);
+    console.log(`  -> Recommendation: ${finding.recommendation}`);
+  }
+  if (report.promptRecommendations && report.promptRecommendations.length > 0) {
+    console.log(`\nPrompt Recommendations (${report.promptRecommendations.length}):`);
+    for (const rec of report.promptRecommendations) {
+      console.log(`  [${rec.target}]`);
+      console.log(`  - Current: ${rec.currentBehavior}`);
+      console.log(`  - Change:  ${rec.recommendedChange}`);
+    }
+  }
+  console.log(`\n📄 Complete Markdown Report saved to: traces/report_${sessionId}.md`);
+  console.log(`💾 Raw Telemetry Trace saved to:       traces/${sessionId}.json`);
+  console.log(`============================================================\n`);
+}
 
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext();
-  const page = await context.newPage();
+async function runSimulation() {
+  if (!OPENAI_API_KEY) {
+    console.error('❌ OPENAI_API_KEY is missing in environment or .env');
+    process.exit(1);
+  }
 
-  try {
-    const targetUrl = new URL(BASE_URL);
-    targetUrl.searchParams.set('autoPersist', 'true');
-    console.log(`📡 Navigating to ${targetUrl.toString()}...`);
-    await page.goto(targetUrl.toString(), { waitUntil: 'networkidle', timeout: 30000 });
+  const rawScenario = JSON.parse(
+    fs.readFileSync(path.resolve(process.cwd(), 'src/lib/lessons/cafe-001.json'), 'utf-8')
+  );
+  const scenario = scenarioSchema.parse(rawScenario);
+  const sessionRng = createSessionRng({ seed, friction: frictionMode });
+  const initialState = createInitialState(scenario, sessionRng);
+  let lessonState = structuredClone(initialState);
 
-    // Wait for the opening waiter message to appear and finish animating
-    console.log(`⏳ Waiting for Waiter's opening greeting...`);
-    await page.waitForSelector('[data-testid="chat-bubble"][data-role="assistant"][data-status="done"]', { timeout: 30000 });
+  const sessionId = crypto.randomUUID();
+  const startedAt = new Date().toISOString();
+  const startedMs = Date.now();
+  const turns: TurnTrace[] = [];
+  const dialogueLines: string[] = [];
 
-    const openingBubble = page.locator('[data-testid="chat-bubble"][data-role="assistant"][data-status="done"]').first();
-    const openingText = (await openingBubble.innerText()).trim();
-    console.log(`👋 Waiter: "${openingText}"\n`);
+  const npc = scenario.characters[scenario.npcCharacterId]!;
+  const interlocutors = Object.values(scenario.characters)
+    .filter((c) => c.id !== scenario.npcCharacterId)
+    .map((c) => c.role);
 
-    // Retrieve Session ID
-    const sessionId = await page.evaluate(() => {
-      const win = globalThis as unknown as Record<string, unknown>;
-      return win.__GABO_SESSION_ID__ as string;
-    });
-    console.log(`📋 Session ID: ${sessionId}\n`);
+  console.log(`\n🤖 Launching Autonomous Dynamic Student Test Agent (Direct Engine Mode)...`);
+  console.log(`Session ID: ${sessionId}`);
+  console.log(`Persona:    ${persona} (friction=${frictionMode ?? 'random'}, seed=${seed ?? 'none'})`);
+  console.log(`Models:     Director=${DIRECTOR_MODEL}, Actor=${ACTOR_MODEL}, Student=${STUDENT_MODEL}\n`);
 
-    let isFinished = false;
-    let turnCount = 1;
-    const MAX_TURNS = 7;
+  const MAX_SIM_TURNS = 7;
 
-    while (!isFinished && turnCount <= MAX_TURNS) {
-      turnCount++;
-
-      // 1. Extract current dialogue history and latest waiter utterance from the DOM
-      const messagesData = await page.evaluate(() => {
-        const bubbles = document.querySelectorAll('[data-testid="chat-bubble"]');
-        const list: Array<{ role: string; text: string }> = [];
-        bubbles.forEach((b) => {
-          const role = b.getAttribute('data-role') || 'unknown';
-          const textEl = b.querySelector('[data-testid="bubble-text"]');
-          const text = textEl ? (textEl as HTMLElement).innerText.trim() : (b as HTMLElement).innerText.trim();
-          list.push({ role, text });
-        });
-        return list;
-      });
-
-      const dialogueHistory = messagesData.map((m) => `${m.role === 'assistant' ? 'Waiter' : 'Tourist'}: ${m.text}`).join('\n');
-      const latestAssistantMsg = [...messagesData].reverse().find((m) => m.role === 'assistant');
-      const latestWaiterLine = latestAssistantMsg?.text || openingText;
-
-      // 2. Student LLM Agent decides dynamically what to say in response
-      console.log(`🧠 [Turn ${turnCount}] Student Agent pondering reaction to: "${latestWaiterLine.slice(0, 60)}..."`);
-      const studentInput = await generateStudentResponse({
+  for (let turnIndex = 1; turnIndex <= MAX_SIM_TURNS; turnIndex++) {
+    let studentInput = '';
+    if (turnIndex > 1) {
+      const latestWaiterLine = dialogueLines.at(-1)?.replace(/^Waiter:\s*/, '') ?? '';
+      studentInput = await generateStudentResponse({
         latestWaiterLine,
-        dialogueHistory,
-        turnNumber: turnCount,
+        dialogueHistory: dialogueLines.join('\n'),
+        turnNumber: turnIndex,
         personaType: persona
       });
-
-      console.log(`🗣️ Tourist (${persona}): "${studentInput}"`);
-
-      // Count assistant messages before submission
-      const prevAssistantCount = await page.locator('[data-testid="chat-bubble"][data-role="assistant"]').count();
-
-      // 3. Type and submit into UI
-      const inputLocator = page.locator('[data-testid="chat-input"]');
-      await inputLocator.fill(studentInput);
-
-      const submitBtn = page.locator('[data-testid="chat-submit"]');
-      await submitBtn.click();
-
-      // 4. Wait for the waiter's next reply to appear and finish animating
-      await page.waitForFunction((expectedCount) => {
-        const bubbles = document.querySelectorAll('[data-testid="chat-bubble"][data-role="assistant"][data-status="done"]');
-        return bubbles.length >= expectedCount;
-      }, prevAssistantCount + 1, { timeout: 35000 });
-
-      await page.waitForTimeout(1000);
-
-      const latestAssistantBubble = page.locator('[data-testid="chat-bubble"][data-role="assistant"][data-status="done"]').last();
-      const latestAssistantText = (await latestAssistantBubble.innerText()).trim();
-      console.log(`☕ Waiter: "${latestAssistantText}"`);
-
-      // 5. Inspect Milestones Status
-      const milestoneStatuses = await page.evaluate(() => {
-        const items = document.querySelectorAll('[data-testid="milestone-item"]');
-        const map: Record<string, string> = {};
-        items.forEach((item) => {
-          const id = item.getAttribute('data-milestone-id');
-          const status = item.getAttribute('data-status');
-          if (id && status) map[id] = status;
-        });
-        return map;
-      });
-
-      console.log(`📊 Milestones Status:`, milestoneStatuses);
-
-      // Check if session status is finished
-      const lessonState = await page.evaluate(() => {
-        const win = globalThis as unknown as Record<string, unknown>;
-        return typeof win.__GABO_LESSON_STATE__ === 'function' ? (win.__GABO_LESSON_STATE__ as () => { status?: string })() : null;
-      });
-
-      if (lessonState && lessonState.status !== 'in_progress') {
-        console.log(`\n🎉 Scenario resolved with status: '${lessonState.status}'!`);
-        isFinished = true;
-      }
-      console.log(``);
+      dialogueLines.push(`Tourist: ${studentInput}`);
+      console.log(`🗣️ [Turn ${turnIndex}] Tourist (${persona}): "${studentInput}"`);
     }
 
-    console.log(`🏁 Lesson simulation finished! Fetching complete session trace...`);
-    await page.evaluate(async () => {
-      const win = globalThis as unknown as Record<string, unknown>;
-      if (typeof win.__GABO_PERSIST_TRACE__ === 'function') {
-        await (win.__GABO_PERSIST_TRACE__ as () => Promise<unknown>)();
-      }
+    const preState = structuredClone(lessonState);
+    const dialogueSnapshot = dialogueLines.join('\n');
+    const directorInput = buildDirectorInput(scenario, lessonState, dialogueSnapshot, studentInput);
+    const { systemMessage: dirSys, userMessage: dirUser } = buildDirectorMessages(directorInput);
+
+    const dirStart = Date.now();
+    const dirRes = await generateText({
+      model: openai(DIRECTOR_MODEL),
+      temperature: 0,
+      system: String(dirSys.content),
+      messages: [dirUser],
+      output: Output.object({ schema: directorOutputSchema })
+    });
+    const dirDuration = Date.now() - dirStart;
+    const dirOutput = dirRes.output;
+    const dirUsage = normalizeUsage(dirRes.usage);
+
+    lessonState = reduce(lessonState, scenario, dirOutput, sessionRng);
+
+    console.log(
+      `🎬 [Turn ${turnIndex}] Director (${dirDuration}ms): completed=${JSON.stringify(dirOutput.observedDeltas.completedMilestones)}, slots=${JSON.stringify(dirOutput.observedDeltas.filledSlots.map((s) => `${s.slotId}=${s.value}`))}, nextFocus=${lessonState.focusMilestoneId}, activeFrictions=${JSON.stringify(lessonState.activeFrictions)}`
+    );
+
+    const actorInput = {
+      language: scenario.language,
+      slugline: scenario.setting.slugline,
+      role: npc.role,
+      stageDirections: dirOutput.stageDirections,
+      interlocutors,
+      dialogue: dialogueSnapshot,
+      worldFacts: lessonState.worldFacts,
+      variables: lessonState.variables
+    };
+    const { systemMessage: actSys, userMessage: actUser } = buildActorMessages(actorInput);
+
+    const actStart = Date.now();
+    const actRes = await generateText({
+      model: openai(ACTOR_MODEL),
+      system: String(actSys.content),
+      messages: [actUser],
+      output: Output.object({ schema: actorOutputSchema })
+    });
+    const actDuration = Date.now() - actStart;
+    const actOutput = actRes.output;
+    const actUsage = normalizeUsage(actRes.usage);
+
+    dialogueLines.push(`Waiter: ${actOutput.text}`);
+    console.log(`☕ [Turn ${turnIndex}] Waiter (${actDuration}ms): "${actOutput.text}"\n`);
+
+    turns.push({
+      turnIndex,
+      timestamp: new Date().toISOString(),
+      studentInput,
+      dialogueHistorySnapshot: dialogueSnapshot,
+      preState,
+      director: {
+        traceId: crypto.randomUUID(),
+        spanId: crypto.randomUUID(),
+        model: DIRECTOR_MODEL,
+        durationMs: dirDuration,
+        tokens: dirUsage,
+        messages: [
+          { role: 'system', content: String(dirSys.content) },
+          { role: 'user', content: String(dirUser.content) }
+        ],
+        input: directorInput,
+        output: dirOutput,
+        rawOutput: JSON.stringify(dirOutput)
+      },
+      reducedState: structuredClone(lessonState),
+      actor: {
+        traceId: crypto.randomUUID(),
+        spanId: crypto.randomUUID(),
+        model: ACTOR_MODEL,
+        durationMs: actDuration,
+        tokens: actUsage,
+        messages: [
+          { role: 'system', content: String(actSys.content) },
+          { role: 'user', content: String(actUser.content) }
+        ],
+        input: actorInput,
+        output: actOutput,
+        rawOutput: JSON.stringify(actOutput)
+      },
+      events: []
     });
 
-    const trace = await page.evaluate(async () => {
-      const win = globalThis as unknown as Record<string, unknown>;
-      return typeof win.__GABO_GET_TRACE__ === 'function' ? await (win.__GABO_GET_TRACE__ as () => Promise<unknown>)() : null;
-    });
-
-    const typedTrace = trace as { turns?: unknown[]; status?: string } | null;
-    console.log(`📦 Captured full trace with ${typedTrace?.turns?.length ?? 0} turns. Final Status: ${typedTrace?.status ?? 'unknown'}`);
-
-    if (!shouldJudge) {
-      console.log(`\n============================================================`);
-      console.log(`✅ LESSON RUN COMPLETED`);
-      console.log(`============================================================`);
-      console.log(`Session ID: ${sessionId}`);
-      console.log(`Persona:    ${persona}`);
-      console.log(`Turns:      ${typedTrace?.turns?.length ?? 0}`);
-      console.log(`Status:     ${typedTrace?.status ?? 'unknown'}`);
-      console.log(`💾 Raw Telemetry Trace: traces/${sessionId}.json`);
-      console.log(`💡 To analyze this session, run:`);
-      console.log(`   npm run test:analyze -- ${sessionId}`);
-      console.log(`   Or pass '--judge' to evaluate directly upon playthrough.`);
-      console.log(`============================================================\n`);
-    } else {
-      console.log(`\n⚖️ Invoking Judge LLM to evaluate session evidence...`);
-      const judgeRes = await page.evaluate(async () => {
-        const win = globalThis as unknown as Record<string, unknown>;
-        return typeof win.__GABO_EVALUATE__ === 'function' ? await (win.__GABO_EVALUATE__ as () => Promise<{ error?: string; report?: JudgeReport }>)() : null;
-      });
-
-      if (!judgeRes || judgeRes.error || !judgeRes.report) {
-        console.error(`❌ Judge Evaluation failed:`, judgeRes?.error ?? 'Unknown error or empty report');
-      } else {
-        const report = judgeRes.report;
-        console.log(`\n============================================================`);
-        console.log(`🏆 GABO SESSION EVALUATION REPORT (DYNAMIC AGENT RUN)`);
-        console.log(`============================================================`);
-        console.log(`Overall Score: ${report.overallScore} / 10`);
-        console.log(`- Naturalness & Immersion:  ${report.categoryScores.naturalness} / 10`);
-        console.log(`- Continuity & Consistency: ${report.categoryScores.continuity} / 10`);
-        console.log(`- Sensing Accuracy:         ${report.categoryScores.sensingAccuracy} / 10`);
-        console.log(`- Pedagogical Guidance:     ${report.categoryScores.pedagogicalGuidance} / 10`);
-        console.log(`\nSummary:\n${report.summary}`);
-        console.log(`\nMilestone Analysis:\n${report.milestoneAnalysis}`);
-        console.log(`\nFindings (${report.findings.length}):`);
-        for (const finding of report.findings) {
-          console.log(`  [${finding.severity.toUpperCase()}] [${finding.category}] ${finding.description}`);
-          if (finding.evidence) console.log(`  * Evidence: "${finding.evidence}"`);
-          console.log(`  -> Recommendation: ${finding.recommendation}`);
-        }
-        if (report.promptRecommendations && report.promptRecommendations.length > 0) {
-          console.log(`\nPrompt Recommendations (${report.promptRecommendations.length}):`);
-          for (const rec of report.promptRecommendations) {
-            console.log(`  [${rec.target}]`);
-            console.log(`  - Current: ${rec.currentBehavior}`);
-            console.log(`  - Change:  ${rec.recommendedChange}`);
-          }
-        }
-        console.log(`\n📄 Complete Markdown Report saved to: traces/report_${sessionId}.md`);
-        console.log(`💾 Raw Telemetry Trace saved to:       traces/${sessionId}.json`);
-        console.log(`============================================================\n`);
-      }
+    if (lessonState.status !== 'in_progress') {
+      console.log(`🎉 Scenario resolved on Turn ${turnIndex} with status: '${lessonState.status}'!`);
+      break;
     }
+  }
 
-  } catch (err) {
-    console.error(`💥 Dynamic Test Agent encountered an error:`, err);
-    process.exitCode = 1;
-  } finally {
-    await browser.close();
+  const completedMilestones = Object.entries(lessonState.milestones)
+    .filter(([, s]) => s === 'done')
+    .map(([id]) => id);
+  const uncompletedMilestones = Object.entries(lessonState.milestones)
+    .filter(([, s]) => s !== 'done')
+    .map(([id]) => id);
+  const filledSlots = Object.fromEntries(
+    Object.entries(lessonState.slots)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => [k, v?.value])
+  );
+
+  const totalTokens = turns.reduce(
+    (acc, t) => {
+      const dt = t.director?.tokens ?? { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+      const at = t.actor?.tokens ?? { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+      return {
+        promptTokens: acc.promptTokens + dt.promptTokens + at.promptTokens,
+        completionTokens: acc.completionTokens + dt.completionTokens + at.completionTokens,
+        totalTokens: acc.totalTokens + dt.totalTokens + at.totalTokens
+      };
+    },
+    { promptTokens: 0, completionTokens: 0, totalTokens: 0 }
+  );
+
+  const trace: SessionTrace = {
+    sessionId,
+    scenarioId: scenario.id,
+    language: scenario.language,
+    goal: scenario.goal,
+    startedAt,
+    updatedAt: new Date().toISOString(),
+    scenario,
+    initialState,
+    turns,
+    finalState: lessonState,
+    status: lessonState.status,
+    summary: {
+      totalTurns: turns.length,
+      completedMilestones,
+      uncompletedMilestones,
+      filledSlots,
+      totalDirectorCalls: turns.length,
+      totalActorCalls: turns.length,
+      totalTokens,
+      durationSeconds: Math.round((Date.now() - startedMs) / 1000)
+    }
+  };
+
+  const tracesDir = path.resolve(process.cwd(), 'traces');
+  if (!fs.existsSync(tracesDir)) fs.mkdirSync(tracesDir, { recursive: true });
+  const tracePath = path.join(tracesDir, `${sessionId}.json`);
+  fs.writeFileSync(tracePath, JSON.stringify(trace, null, 2), 'utf-8');
+
+  const invariants = detectTraceInvariantViolations(trace);
+  console.log(`🛡️  Deterministic Invariant Check: ${invariants.length} violation(s) found.`);
+  for (const inv of invariants) {
+    console.log(`   - [Turn ${inv.turnIndex ?? '?'}] [${inv.severity.toUpperCase()}] ${inv.description}`);
+  }
+
+  if (!shouldJudge) {
+    console.log(`\n============================================================`);
+    console.log(`✅ LESSON RUN COMPLETED`);
+    console.log(`============================================================`);
+    console.log(`Session ID: ${sessionId}`);
+    console.log(`Persona:    ${persona}`);
+    console.log(`Turns:      ${trace.turns.length}`);
+    console.log(`Status:     ${trace.status}`);
+    console.log(`Completed:  ${JSON.stringify(completedMilestones)}`);
+    console.log(`💾 Raw Telemetry Trace: traces/${sessionId}.json`);
+    console.log(`============================================================\n`);
+  } else {
+    console.log(`\n⚖️ Invoking Hybrid Judge (Deterministic + LLM) to evaluate session evidence...`);
+    const report = await evaluateSessionCore(trace, { apiKey: OPENAI_API_KEY });
+    printJudgeReport(sessionId, report);
   }
 }
 
-void run();
+void runSimulation();

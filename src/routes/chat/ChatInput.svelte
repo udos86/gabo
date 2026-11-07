@@ -1,6 +1,10 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
 
+  interface SpeechRecognitionEvent {
+    results: SpeechRecognitionResultList;
+  }
+
   interface SpeechRecognitionInstance {
     continuous: boolean;
     interimResults: boolean;

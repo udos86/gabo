@@ -1,7 +1,7 @@
 <script lang="ts">
   import { slide } from 'svelte/transition';
-  import type { MilestoneDef } from '$lib/scenario/scenario';
-  import type { MilestoneStatus } from '$lib/scenario/state';
+  import type { MilestoneDef } from '#lib/scenario/scenario';
+  import type { MilestoneStatus } from '#lib/scenario/state';
 
   interface Props {
     milestones: MilestoneDef[];
