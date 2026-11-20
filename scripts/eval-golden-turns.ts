@@ -3,9 +3,10 @@ import path from 'node:path';
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateText, Output } from 'ai';
 
-import { buildDirectorInput, buildDirectorMessages } from '#lib/ai/director';
-import type { Scenario } from '#lib/scenario/scenario';
-import { directorOutputSchema, type DirectorOutput, type LessonState } from '#lib/scenario/state';
+import { buildDirectorInput, buildDirectorMessages } from '#lib/ai/director/director';
+import { directorOutputSchema, type DirectorOutput } from '#lib/ai/director/director.schema';
+import type { Scenario } from '#lib/scenario/schema';
+import type { LessonState } from '#lib/scenario/state';
 import type { SessionTrace } from '#lib/trace/types';
 
 function loadEnv() {
@@ -147,7 +148,7 @@ async function runEval() {
     process.exit(1);
   }
 
-  const goldenPath = path.resolve(process.cwd(), 'src/lib/ai/golden-turns.json');
+  const goldenPath = path.resolve(process.cwd(), 'evals/golden-turns.json');
   const allCases = JSON.parse(fs.readFileSync(goldenPath, 'utf-8')) as GoldenTurnCase[];
   const cases = idFilter ? allCases.filter((c) => c.id.includes(idFilter)) : allCases;
 

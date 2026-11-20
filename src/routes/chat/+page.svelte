@@ -3,11 +3,12 @@
   import { SvelteMap } from 'svelte/reactivity';
   import { StructuredObject, type UIMessage } from '@ai-sdk/svelte';
 
-  import { convertToDialogue } from '#lib/ai/actor';
-  import { buildDirectorInput } from '#lib/ai/director';
-  import { actorOutputSchema, type AssistantMessageMetadata, type GaboUIMessage, type UserMessageMetadata } from '#lib/ai/schema';
+  import { actorOutputSchema } from '#lib/ai/actor/actor.schema';
+  import { buildDirectorInput } from '#lib/ai/director/director';
+  import { directorOutputSchema } from '#lib/ai/director/director.schema';
+  import { convertToDialogue, type AssistantMessageMetadata, type GaboUIMessage, type UserMessageMetadata } from '#lib/chat/messages';
   import { createInitialState, createSessionRng, reduce, type Rng } from '#lib/scenario/reducer';
-  import { directorOutputSchema, type LessonState } from '#lib/scenario/state';
+  import type { LessonState } from '#lib/scenario/state';
   import { Resolver } from '#lib/utils/resolver';
   import type { TraceAction } from '#lib/trace/types';
 

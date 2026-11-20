@@ -1,6 +1,4 @@
-import { z } from 'zod';
-
-import type { FrictionId, MilestoneId, SlotId } from '#lib/scenario/scenario';
+import type { FrictionId, MilestoneId, SlotId } from '#lib/scenario/schema';
 
 export type MilestoneStatus = 'locked' | 'eligible' | 'active' | 'done' | 'skipped';
 export type DirectorMode = 'advance' | 'repair' | 'pressure' | 'deflect';
@@ -62,40 +60,30 @@ export interface LessonState {
   status: LessonStatus;
 }
 
-/**
- * The Director senses milestone deltas AND authors the next stage directions in
- * a single call. Every delta is a PROPOSAL; the reducer validates and applies
- * them idempotently against the DAG.
- */
-export const directorOutputSchema = z.object({
-  agent: z.literal('director'),
-  observedDeltas: z.object({
-    completedMilestones: z.array(z.string()),
-    filledSlots: z.array(
-      z.object({
-        slotId: z.string(),
-        value: z.string(),
-        /** The turn whose utterance justifies the fill; reducer rejects stale writes. */
-        evidenceTurn: z.number()
-      })
-    ),
-    resolvedFrictions: z.array(z.string()),
-    offTopic: z.boolean()
-  }),
-  /** Stage directions handed to the Actor`. */
-  stageDirections: z.array(z.string()),
-  /**
-   * NPC actions performed this turn (e.g. menu_given: true) — folded into
-   * worldFacts by the reducer. Modelled as an array (not a map) because OpenAI's
-   * strict structured-output mode forbids open-ended record schemas.
-   */
-  worldFactUpdates: z.array(
-    z.object({
-      key: z.string(),
-      value: z.union([z.boolean(), z.string()])
-    })
-  ),
-  storyComplete: z.boolean()
-});
+export interface SlotFill {
+  slotId: string;
+  value: string;
+  /** The turn whose utterance justifies the fill; reducer rejects stale writes. */
+  evidenceTurn: number;
+}
 
-export type DirectorOutput = z.infer<typeof directorOutputSchema>;
+export interface WorldFactUpdate {
+  key: string;
+  value: boolean | string;
+}
+
+export interface ObservedDeltas {
+  completedMilestones: string[];
+  filledSlots: SlotFill[];
+  resolvedFrictions: string[];
+  offTopic: boolean;
+}
+
+/**
+ * Minimal state-transition proposal accepted by the scenario reducer.
+ * `DirectorOutput` satisfies this contract structurally without coupling `scenario/` to `ai/`.
+ */
+export interface DirectorDelta {
+  observedDeltas: ObservedDeltas;
+  worldFactUpdates?: WorldFactUpdate[];
+}

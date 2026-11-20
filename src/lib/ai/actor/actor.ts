@@ -1,6 +1,6 @@
-import { Output, streamText, type SystemModelMessage, type UserModelMessage } from "ai";
+import { Output, streamText, type SystemModelMessage, type UserModelMessage } from 'ai';
 
-import { actorOutputSchema, type ActorAgentContext, type GaboUIMessage } from "#lib/ai/schema";
+import { actorOutputSchema, type ActorAgentContext } from '#lib/ai/actor/actor.schema';
 
 export function buildActorMessages({
   dialogue = '',
@@ -71,18 +71,4 @@ export async function runActorAgent(context: ActorAgentContext) {
   });
 
   return Object.assign(result, { systemMessage, userMessage });
-}
-
-export function convertToDialogue(messages: Array<GaboUIMessage>, characters: Record<string, { role: { name: string } }>) {
-  return messages
-    .filter(({ role, metadata }) => role === "user" || metadata?.agent === "actor")
-    .filter(({ metadata }) => metadata.status === 'done')
-    .filter(({ parts }) => parts.some((part) => part.type === "text"))
-    .map(({ parts, metadata }) => {
-      const textPart = parts.find((part) => part.type === "text")!;
-      const character = characters[metadata!.characterId];
-      const name = character?.role.name ?? metadata!.characterId;
-      return `${name}: ${textPart.text}`;
-    })
-    .join('\n');
 }

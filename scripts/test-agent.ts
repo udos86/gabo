@@ -4,12 +4,12 @@ import path from 'node:path';
 import { createOpenAI } from '@ai-sdk/openai';
 import { generateText, Output } from 'ai';
 
-import { buildActorMessages } from '#lib/ai/actor';
-import { buildDirectorInput, buildDirectorMessages } from '#lib/ai/director';
-import { actorOutputSchema } from '#lib/ai/schema';
+import { buildActorMessages } from '#lib/ai/actor/actor';
+import { actorOutputSchema } from '#lib/ai/actor/actor.schema';
+import { buildDirectorInput, buildDirectorMessages } from '#lib/ai/director/director';
+import { directorOutputSchema } from '#lib/ai/director/director.schema';
 import { createInitialState, createSessionRng, reduce } from '#lib/scenario/reducer';
-import { scenarioSchema } from '#lib/scenario/scenario';
-import { directorOutputSchema } from '#lib/scenario/state';
+import { scenarioSchema } from '#lib/scenario/schema';
 import { detectTraceInvariantViolations, evaluateSessionCore } from '#lib/server/judgeCore';
 import { normalizeUsage, type JudgeReport, type SessionTrace, type TurnTrace } from '#lib/trace/types';
 

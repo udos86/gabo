@@ -33,14 +33,14 @@ Before writing or modifying code, formulate a structured Implementation Plan:
 1. **Map targets to concrete source files**:
    - `scenario_rubric` / environmental rules / frictions:
      - `src/lib/lessons/<lessonId>.json` (e.g., `cafe-001.json` milestones, rubrics, frictions, assumptions)
-     - `src/lib/scenario/scenario.ts`
+     - `src/lib/scenario/schema.ts`
    - `director_prompt` / sensing logic:
-     - `src/lib/ai/director.ts` (`systemPrompt`, `MODE_GUIDANCE`, `effectiveRubric`)
+     - `src/lib/ai/director/director.ts` (`systemPrompt`, `MODE_GUIDANCE`, `effectiveRubric`)
      - `src/lib/scenario/reducer.ts` (milestone state transition rules)
    - `actor_prompt` / dialogue tone / guidance:
-     - `src/lib/ai/actor.ts` (`buildActorMessages`, tone, open-ended elicitation)
+     - `src/lib/ai/actor/actor.ts` (`buildActorMessages`, tone, open-ended elicitation)
    - `teacher_prompt` / evaluation:
-     - `src/lib/ai/teacher.ts`
+     - `src/lib/ai/teacher/teacher.ts`
 2. **Detail proposed changes**:
    - Clearly state the problem, root cause, and the exact diff / prompt tweak needed.
    - List the cohort files queued for cleanup once verified.
@@ -56,7 +56,7 @@ Apply the necessary modifications using file edit tools:
 ### Phase 4: Verification Gate & Golden-Turn Conservation
 Always verify the changes before proceeding to trace cleanup:
 1. **Conserve Resolved Edge Cases as Golden Turns**:
-   - When remediating a sensing or stage-direction defect from a session trace, extract the problematic turn into [`src/lib/ai/golden-turns.json`](file:///Users/udo/Developer/gabo/src/lib/ai/golden-turns.json) (using `npm run test:eval -- --extract=<sessionId> --turn=<turnIndex>`) so the fix is permanently guarded against future regressions even after cohort traces are cleaned up.
+   - When remediating a sensing or stage-direction defect from a session trace, extract the problematic turn into [`evals/golden-turns.json`](file:///Users/udo/Developer/gabo/evals/golden-turns.json) (using `npm run test:eval -- --extract=<sessionId> --turn=<turnIndex>`) so the fix is permanently guarded against future regressions even after cohort traces are cleaned up.
 2. **Run Verification Suite**:
 ```bash
 # 1. Typecheck and Svelte check

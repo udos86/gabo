@@ -1,28 +1,35 @@
 # Application Use Case & Purpose
 
-This application is an interactive, narrative-driven language learning platform. It immerses users in dynamic scenarios (screenplays/plays) where they must converse in a target language (e.g., French) to advance the story. Instead of traditional language exercises, users interact via a chat interface, acting out their part in a "beat" or scene while AI agents play the roles of other characters and guide the learning process.
+This application is an interactive, narrative-driven language learning platform. It immerses users in dynamic roleplay scenarios (lessons) where they must converse in a target language (e.g., French) to achieve communicative milestones and advance the story.
 
 ## Agent Architecture and Roles
 
-The application relies on two distinct AI agents that work together to create the interactive learning experience:
+The application relies on specialized AI agents paired with a deterministic scenario state machine:
 
-### 1. The Actor Agent
-- **Purpose:** Plays the role of the interlocutor(s) in the current scene.
-- **Context:** Aware of the screenplay's slugline, the current beat's actions, the target language, and its assigned character role (including gender and description).
-- **Behavior:** Stays in character and responds to the user naturally based on the ongoing dialogue and the specific actions defined for the current scene. It provides the conversational immersion.
+### 1. The Scenario Engine (`src/lib/scenario/`)
+- **Purpose:** Defines the scenario DAG (`schema.ts`), tracks authoritative session state (`state.ts`), and deterministically validates and applies state transitions (`reducer.ts`).
+- **Behavior:** Controls milestone prerequisites, slot provenance, narrative frictions, pedagogical modes (`advance`, `repair`, `pressure`, `deflect`), turn budgets, and win/timeout conditions.
 
-### 2. The Teacher Agent
+### 2. The Director Agent (`src/lib/ai/director/`)
 - **Purpose:** Acts as a hidden guide and evaluator behind the scenes.
-- **Context:** Has access to the same context as the Actor Agent, plus the user's most recent input.
-- **Behavior:** Evaluates the user's input to determine if it meets the requirements of the current scene/beat. It provides constructive feedback to help the user improve their language skills and returns a `passed` boolean. 
-- **Flow Control:** If the Teacher determines the user has successfully fulfilled the goal of the current beat (`passed: true`), the application advances to the next beat in the screenplay. If not, the user must try again based on the Teacher's feedback.
+- **Context:** Receives the current `LessonState`, scenario milestones/rubrics, active frictions, world facts, dialogue history, and the student's latest input.
+- **Behavior:** Senses completed milestones, filled slots, and resolved frictions (`observedDeltas`) and authors the next `stageDirections` for the Actor. Every delta is a proposal validated by the scenario reducer.
+
+### 3. The Actor Agent (`src/lib/ai/actor/`)
+- **Purpose:** Plays the role of the NPC interlocutor(s) in the current scene.
+- **Context:** Aware of the scene's slugline, dialogue history, world facts, run variables, character role, and the Director's stage directions.
+- **Behavior:** Stays in character and responds naturally in the target language, providing conversational immersion.
+
+### 4. The Teacher Agent (`src/lib/ai/teacher/`)
+- **Purpose:** Evaluates individual student utterances against grammar, context, actions, naturalness, and tone to provide concise feedback and a `passed` boolean (available via `/api/agent/teacher`).
 
 ## Dialogue Flow
 
-1. The scene (Play) starts at a specific beat. If the character speaking is an AI, the **Actor Agent** generates the dialogue.
-2. The User provides input via the chat interface to respond or initiate conversation.
-3. The **Teacher Agent** evaluates the user's input. It provides textual feedback and a pass/fail determination.
-4. If the user passes, the beat advances. If the next speaker is an AI, the Actor Agent is invoked again. If the user fails, the scene remains on the current beat, and the user tries again, guided by the Teacher's feedback.
+1. A lesson JSON (`src/lib/lessons/<id>.json`) is loaded and initialized via `createInitialState()`.
+2. The **Actor Agent** opens or responds in character based on the current stage directions.
+3. The User provides input via the chat interface (`src/routes/chat/`).
+4. The **Director Agent** senses what the student accomplished and authors the next stage directions.
+5. The **Scenario Reducer** (`reduce()`) validates and commits the Director's proposed deltas, updates milestones/modes/status, and hands off to the Actor for the next turn until all mandatory milestones are completed (`won`) or the turn budget runs out (`timed_out`).
 
 ## Development & Commands
 

@@ -1,5 +1,5 @@
-import { deriveMaxTurns, type MilestoneDef, type MilestoneId, type Scenario } from '#lib/scenario/scenario';
-import type { DirectorOutput, LessonState, LessonStatus, MilestoneStatus } from '#lib/scenario/state';
+import { deriveMaxTurns, type MilestoneDef, type MilestoneId, type Scenario } from '#lib/scenario/schema';
+import type { DirectorDelta, LessonState, LessonStatus, MilestoneStatus } from '#lib/scenario/state';
 
 /** Number of consecutive attempts on the focus milestone before switching to repair mode. */
 const REPAIR_ATTEMPT_THRESHOLD = 2;
@@ -205,7 +205,7 @@ export function createInitialState(scenario: Scenario, rng: Rng = Math.random): 
  * @param rng - Pseudo-random number generator for rolling newly unlocked frictions (defaults to Math.random).
  * @returns A fresh, immutable `LessonState` reflecting all committed state transitions.
  */
-export function reduce(state: LessonState, scenario: Scenario, output: DirectorOutput, rng: Rng = Math.random): LessonState {
+export function reduce(state: LessonState, scenario: Scenario, output: DirectorDelta, rng: Rng = Math.random): LessonState {
   const defs = milestoneMap(scenario);
   const statuses: Record<MilestoneId, MilestoneStatus> = { ...state.milestones };
   const slots = { ...state.slots };

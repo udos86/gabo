@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { deriveMaxTurns, scenarioSchema, type Scenario } from '#lib/scenario/scenario';
+import { deriveMaxTurns, scenarioSchema, type Scenario } from '#lib/scenario/schema';
 import { createInitialState, createSessionRng, reduce } from '#lib/scenario/reducer';
-import type { DirectorOutput } from '#lib/scenario/state';
+import type { DirectorOutput } from '#lib/ai/director/director.schema';
 
 function buildScenario(overrides: Partial<Scenario> = {}): Scenario {
   return scenarioSchema.parse({

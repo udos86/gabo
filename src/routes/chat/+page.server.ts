@@ -1,4 +1,4 @@
-import { scenarioSchema, type Scenario } from '#lib/scenario/scenario';
+import { scenarioSchema, type Scenario } from '#lib/scenario/schema';
 
 import type { PageServerLoad } from './$types';
 

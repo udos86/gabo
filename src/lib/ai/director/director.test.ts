@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import cafeRaw from '#lib/lessons/cafe-001.json';
-import { scenarioSchema } from '#lib/scenario/scenario';
+import { scenarioSchema } from '#lib/scenario/schema';
 import type { LessonState } from '#lib/scenario/state';
-import { buildDirectorInput, buildDirectorMessages } from '#lib/ai/director';
-import goldenTurnsRaw from '#lib/ai/golden-turns.json';
+import { buildDirectorInput, buildDirectorMessages } from '#lib/ai/director/director';
+import goldenTurnsRaw from '../../../../evals/golden-turns.json';
 
 interface GoldenTurnExpectation {
   completedMilestonesIncludes?: string[];

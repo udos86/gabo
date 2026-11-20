@@ -1,51 +1,15 @@
 import { Output, streamText, type SystemModelMessage, type UserModelMessage } from 'ai';
 
-import type { AgentContext, CharacterRoleInput } from '#lib/ai/schema';
-import { directorOutputSchema, type LessonState } from '#lib/scenario/state';
-import type { FrictionDef, MilestoneDef, Scenario } from '#lib/scenario/scenario';
-
-export interface DirectorMilestoneView {
-  id: string;
-  objective: string;
-  kind: string;
-  effectiveRubric: string;
-  status: string;
-  optional: boolean;
-  fillsSlots: string[];
-  npcAssumption?: string;
-}
-
-export interface DirectorSlotView {
-  id: string;
-  description: string;
-}
-
-export interface DirectorFrictionView {
-  id: string;
-  description: string;
-  extraObjective: string;
-}
-
-export interface DirectorAgentInput {
-  language: string;
-  slugline: string;
-  goal: string;
-  role: CharacterRoleInput;
-  interlocutors: CharacterRoleInput[];
-  variables: Record<string, string>;
-  worldFacts: Record<string, boolean | string>;
-  milestones: DirectorMilestoneView[];
-  slots: DirectorSlotView[];
-  focusMilestoneId: string | null;
-  activeFrictions: DirectorFrictionView[];
-  mode: LessonState['mode'];
-  turn: number;
-  maxTurns: number;
-  dialogue: string;
-  studentInput: string;
-}
-
-export type DirectorAgentContext = AgentContext & DirectorAgentInput;
+import {
+  directorOutputSchema,
+  type DirectorAgentContext,
+  type DirectorAgentInput,
+  type DirectorFrictionView,
+  type DirectorMilestoneView,
+  type DirectorSlotView
+} from '#lib/ai/director/director.schema';
+import type { FrictionDef, MilestoneDef, Scenario } from '#lib/scenario/schema';
+import type { LessonState } from '#lib/scenario/state';
 
 /**
  * Base rubric augmented by any active friction attached to the milestone. This

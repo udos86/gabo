@@ -1,6 +1,6 @@
 <script lang="ts">
   import { fade, fly } from 'svelte/transition';
-  import type { AssistantMessageMetadata, GaboUIMessage, UserMessageMetadata } from '#lib/ai/schema';
+  import type { AssistantMessageMetadata, GaboUIMessage, UserMessageMetadata } from '#lib/chat/messages';
 
   interface Props {
     message: GaboUIMessage;

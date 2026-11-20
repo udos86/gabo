@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { judgeEvaluationSchema, judgeFindingSchema, type SessionTrace } from '#lib/trace/types';
 import { detectTraceInvariantViolations, mergeInvariantAndLlmEvaluation } from '#lib/server/judgeCore';
 import cafeRaw from '#lib/lessons/cafe-001.json';
-import { scenarioSchema } from '#lib/scenario/scenario';
+import { scenarioSchema } from '#lib/scenario/schema';
 import { createInitialState } from '#lib/scenario/reducer';
 
 const cafeScenario = scenarioSchema.parse(cafeRaw);
